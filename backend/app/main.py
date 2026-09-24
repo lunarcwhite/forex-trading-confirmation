@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
 
 from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel
 
 from app.schemas import (
     AnalysisOut,
@@ -152,3 +153,25 @@ def scanner(
     from app.workers.scanner import scan_all
 
     return {"rows": scan_all(timeframe, decision), "source": "simulator"}
+
+
+class BacktestIn(BaseModel):
+    symbol: str = "EUR/USD"
+    timeframe: str = "H1"
+    limit: int = 500
+    initial_balance: float = 10000.0
+    risk_pct: float = 1.0
+    spread: float = 0.0
+
+
+@app.post("/api/v1/backtests")
+def run_backtest(body: BacktestIn):
+    from app.services.backtest.engine import run
+
+    if body.symbol not in PAIR_DEFAULTS:
+        raise HTTPException(400, "unknown symbol")
+    candles = gen_candles(body.symbol, body.timeframe, min(body.limit, 2000))
+    out = run(candles, body.initial_balance, body.risk_pct, body.spread)
+    out["symbol"] = body.symbol
+    out["timeframe"] = body.timeframe
+    return out

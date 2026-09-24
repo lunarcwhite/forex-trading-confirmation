@@ -45,6 +45,17 @@ class TestAPI(unittest.TestCase):
         self.assertAlmostEqual(r.json()["lots"], 0.03)
         self.assertEqual(r.json()["status"], "pass")
 
+    def test_backtest_endpoint(self):
+        r = client.post(
+            "/api/v1/backtests",
+            json={"symbol": "EUR/USD", "timeframe": "H1", "limit": 400,
+                  "initial_balance": 10000, "risk_pct": 1, "spread": 0},
+        )
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertIn("assumptions", body)
+        self.assertIn("win_rate", body)
+
 
 if __name__ == "__main__":
     unittest.main()
