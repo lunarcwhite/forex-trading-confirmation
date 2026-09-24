@@ -51,6 +51,9 @@ class TestPersist(unittest.TestCase):
                     cur.execute(
                         "delete from setup_confirmations where setup_id in"
                         " (select setup_id from signals where id=%s)", (sid,))
+                    cur.execute(
+                        "delete from risk_checks where setup_id in"
+                        " (select setup_id from signals where id=%s)", (sid,))
                     row = cur.execute(
                         "delete from signals where id=%s returning setup_id,"
                         " strategy_version_id", (sid,)).fetchone()
@@ -70,6 +73,7 @@ class TestPersist(unittest.TestCase):
                         strat_ids.append(ver[0])
                 for stid in set(strat_ids):
                     cur.execute("delete from strategies where id=%s", (stid,))
+                cur.execute("delete from risk_profiles where user_id=%s", (self.uid,))
                 cur.execute("delete from users where id=%s", (self.uid,))
             conn.commit()
 

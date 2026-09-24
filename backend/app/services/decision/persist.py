@@ -172,6 +172,39 @@ def record_signal(user_id: str, symbol: str, timeframe: str = "H1") -> dict:
                      None if r["result"] == "PASS"
                      else f"{r['type']} {r['result']}"),
                 )
+            # DATABASE.md Rule H: risk checks are stored, not only calculated.
+            # Limits come from the user's risk profile; measurements come from
+            # the real trade plan. Unmeasured rules stay SKIP (never assumed).
+            from app.services.risk.limits import check_limits
+            from app.services.risk.profiles import ensure_default
+
+            profile = ensure_default(cur, user_id)
+            entry = plan.get("entry")
+            sl = plan.get("stop_loss")
+            tp = plan.get("take_profit")
+            rr = plan.get("risk_reward")
+            stop_dist = abs(entry - sl) if entry is not None and sl is not None else None
+            reward_dist = abs(tp - entry) if tp is not None and entry is not None else None
+            limits = check_limits(
+                risk_reward=rr, min_rr=profile["min_risk_reward"],
+                spread=None, max_spread=profile["max_spread"],
+                lots=None, max_lots=profile["max_position_size"],
+                exposure_pct=None, max_exposure_pct=profile["max_exposure_pct"],
+                open_positions=None,
+                max_open_positions=profile["max_open_positions"],
+                daily_loss_pct=None,
+                max_daily_loss_pct=profile["max_daily_loss_pct"],
+            )
+            risk_status = "pass" if limits["status"] == "pass" else "fail"
+            risk_check_id = cur.execute(
+                "insert into risk_checks (setup_id, risk_profile_id, risk_amount,"
+                " risk_percent, position_size, stop_distance, reward_distance,"
+                " risk_reward, spread, exposure_percent, status, failures)"
+                " values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) returning id",
+                (str(setup_id), profile["id"], None,
+                 profile["risk_per_trade_pct"], None, stop_dist, reward_dist,
+                 rr, None, None, risk_status, json.dumps(limits["failures"])),
+            ).fetchone()[0]
             analysis_snap = {"bias": ev["bias"], "indicators": ev["indicators"],
                              "structure": ev["structure"], "mtf": ev["mtf"],
                              "data_quality": ev["data_quality"],
@@ -179,7 +212,12 @@ def record_signal(user_id: str, symbol: str, timeframe: str = "H1") -> dict:
             confirmation_snap = {"confirmations": ev["confirmations"],
                                  "missing": ev["missing_conditions"],
                                  "results": ev["results"]}
-            risk_snap = {"plan": plan, "entry_zone": entry_zone}
+            risk_snap = {"plan": plan, "entry_zone": entry_zone,
+                         "risk_check_id": str(risk_check_id),
+                         "risk_profile_id": profile["id"],
+                         "risk_status": risk_status,
+                         "risk_failures": limits["failures"],
+                         "risk_rules": limits["rules"]}
             signal_id = cur.execute(
                 "insert into signals (setup_id, user_id, decision, direction,"
                 " strategy_version_id, decision_reason, confirmation_snapshot,"
@@ -206,6 +244,8 @@ def record_signal(user_id: str, symbol: str, timeframe: str = "H1") -> dict:
             )
         conn.commit()
     return {"signal_id": str(signal_id), "setup_id": str(setup_id),
+            "risk_check_id": str(risk_check_id),
+            "risk_profile_id": profile["id"], "risk_status": risk_status,
             "state": ev["state"], "score": f"{passed}/{total}"}
 
 
@@ -228,3 +268,61 @@ def list_signals(user_id: str, symbol: str = "", limit: int = 20) -> list[dict]:
              "direction": r[3], "generated_at": r[4].isoformat(),
              "confirmations": r[5].get("confirmations", []),
              "status": r[6]} for r in rows]
+
+
+def _risk_row_to_dict(r) -> dict:
+    keys = ["id", "setup_id", "risk_profile_id", "risk_amount", "risk_percent",
+            "position_size", "stop_distance", "reward_distance", "risk_reward",
+            "spread", "exposure_percent", "status", "failures", "evaluated_at",
+            "created_at"]
+    d = dict(zip(keys, r))
+    d["id"] = str(d["id"])
+    d["setup_id"] = str(d["setup_id"])
+    d["risk_profile_id"] = str(d["risk_profile_id"])
+    for k in ("risk_amount", "risk_percent", "position_size", "stop_distance",
+              "reward_distance", "risk_reward", "spread", "exposure_percent"):
+        d[k] = float(d[k]) if d[k] is not None else None
+    for k in ("evaluated_at", "created_at"):
+        if d[k] is not None:
+            d[k] = d[k].isoformat()
+    return d
+
+
+def risk_for_signal(user_id: str, signal_id: str) -> list[dict]:
+    """Owner-checked risk_checks rows for one signal's setup."""
+    with connect() as conn:
+        own = conn.execute(
+            "select setup_id from signals where id=%s and user_id=%s",
+            (signal_id, user_id),
+        ).fetchone()
+        if not own:
+            raise LookupError("signal not found")
+        rows = conn.execute(
+            "select id, setup_id, risk_profile_id, risk_amount, risk_percent,"
+            " position_size, stop_distance, reward_distance, risk_reward,"
+            " spread, exposure_percent, status, failures, evaluated_at,"
+            " created_at from risk_checks where setup_id=%s"
+            " order by evaluated_at desc",
+            (str(own[0]),),
+        ).fetchall()
+    return [_risk_row_to_dict(r) for r in rows]
+
+
+def risk_for_setup(user_id: str, setup_id: str) -> list[dict]:
+    """Owner-checked risk_checks rows for one setup."""
+    with connect() as conn:
+        own = conn.execute(
+            "select id from setups where id=%s and user_id=%s",
+            (setup_id, user_id),
+        ).fetchone()
+        if not own:
+            raise LookupError("setup not found")
+        rows = conn.execute(
+            "select id, setup_id, risk_profile_id, risk_amount, risk_percent,"
+            " position_size, stop_distance, reward_distance, risk_reward,"
+            " spread, exposure_percent, status, failures, evaluated_at,"
+            " created_at from risk_checks where setup_id=%s"
+            " order by evaluated_at desc",
+            (setup_id,),
+        ).fetchall()
+    return [_risk_row_to_dict(r) for r in rows]

@@ -204,6 +204,63 @@ def validate_risk(body: RiskValidateIn):
     }
 
 
+@app.get("/api/v1/risk/profiles")
+def risk_profiles_list(user: str = Depends(current_user)):
+    """List the caller's risk profiles (login required)."""
+    from app.services.risk.profiles import list_profiles
+
+    if not os.getenv("DATABASE_URL"):
+        raise HTTPException(503, "risk profiles need DATABASE_URL")
+    return {"profiles": list_profiles(user)}
+
+
+@app.post("/api/v1/risk/profiles")
+def risk_profile_create(body: dict, user: str = Depends(current_user)):
+    """Create a risk profile (login, name unique per user)."""
+    from app.services.risk.profiles import create_profile
+
+    if not os.getenv("DATABASE_URL"):
+        raise HTTPException(503, "risk profiles need DATABASE_URL")
+    try:
+        return create_profile(user, body)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.put("/api/v1/risk/profiles/{profile_id}")
+def risk_profile_update(profile_id: str, body: dict,
+                        user: str = Depends(current_user)):
+    """Update own risk profile (login, owner only)."""
+    from app.services.risk.profiles import update_profile
+
+    if not os.getenv("DATABASE_URL"):
+        raise HTTPException(503, "risk profiles need DATABASE_URL")
+    try:
+        return update_profile(user, profile_id, body)
+    except LookupError:
+        raise HTTPException(404, "risk profile not found")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/v1/risk/checks")
+def risk_checks_list(signal_id: str = Query(""), setup_id: str = Query(""),
+                     user: str = Depends(current_user)):
+    """Owner-checked stored risk_checks for one signal/setup (login)."""
+    from app.services.decision.persist import risk_for_setup, risk_for_signal
+
+    if not os.getenv("DATABASE_URL"):
+        raise HTTPException(503, "risk checks need DATABASE_URL")
+    try:
+        if signal_id:
+            return {"checks": risk_for_signal(user, signal_id)}
+        if setup_id:
+            return {"checks": risk_for_setup(user, setup_id)}
+    except LookupError:
+        raise HTTPException(404, "not found")
+    raise HTTPException(400, "signal_id or setup_id required")
+
+
 @app.get("/api/v1/strategies")
 def strategies():
     from app.services.strategy.service import list_strategies
