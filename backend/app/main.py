@@ -472,6 +472,27 @@ def paper_trades(account_id: str = Query(...)):
 
 @app.post("/api/v1/journal")
 def journal_add(body: dict, user: str = Depends(current_user)):
+    """PG-first journal write (login). Falls back to file-store without DB."""
+    if os.getenv("DATABASE_URL"):
+        from app.services.journal.service import create_entry
+
+        signal_id = (body.get("signal_id") or "").strip() if body.get("signal_id") else None
+        trade_id = (body.get("trade_id") or "").strip() if body.get("trade_id") else None
+        paper_snapshot: dict | None = None
+        if trade_id and not signal_id:
+            trade = broker().state.get("trades", {}).get(trade_id)
+            if not trade:
+                raise HTTPException(404, "unknown trade")
+            paper_snapshot = trade.get("signal_snapshot", {}) or {}
+        try:
+            return create_entry(user, {**body,
+                                       "signal_id": signal_id,
+                                       "trade_id": trade_id},
+                                paper_snapshot=paper_snapshot)
+        except LookupError:
+            raise HTTPException(404, "signal not found")
+        except ValueError as e:
+            raise HTTPException(400, str(e))
     try:
         return broker().add_journal(
             body["trade_id"], body.get("thesis", ""),
@@ -481,8 +502,19 @@ def journal_add(body: dict, user: str = Depends(current_user)):
 
 
 @app.get("/api/v1/journal")
-def journal_list():
-    return {"entries": broker().journal()}
+def journal_list(creds=Depends(_bearer)):
+    """PG rows when a valid login token is present, else file-store."""
+    from app.auth import decode_token
+
+    uid = decode_token(creds.credentials) if creds else None
+    if uid and os.getenv("DATABASE_URL"):
+        try:
+            from app.services.journal.service import list_entries
+
+            return {"entries": list_entries(uid), "store": "pg"}
+        except Exception:
+            pass
+    return {"entries": broker().journal(), "store": "file"}
 
 
 class AuthIn(BaseModel):

@@ -6,32 +6,51 @@ const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function Journal() {
   const [entries, setEntries] = useState([]);
-  const [form, setForm] = useState({ trade_id: "", thesis: "", emotion: "", notes: "" });
+  const [store, setStore] = useState("pg");
+  const [form, setForm] = useState({ trade_id: "", signal_id: "", thesis: "", emotion: "", lesson: "", notes: "" });
+  const [msg, setMsg] = useState("");
   const refresh = () =>
-    fetch(`${API}/api/v1/journal`).then((r) => r.json()).then((j) => setEntries(j.entries));
+    fetch(`${API}/api/v1/journal`, { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((j) => { setEntries(j.entries || []); setStore(j.store || "?"); });
   useEffect(() => { refresh(); }, []);
   const add = () => {
+    setMsg("");
     fetch(`${API}/api/v1/journal`, { method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(form) })
-      .then((r) => { if (r.ok) { setForm({ trade_id: "", thesis: "", emotion: "", notes: "" }); refresh(); } });
+      .then(async (r) => {
+        const j = await r.json();
+        if (r.status === 401) { setMsg("Login dulu untuk menulis journal."); return; }
+        if (!r.ok) { setMsg(j.detail || "gagal menyimpan"); return; }
+        setForm({ trade_id: "", signal_id: "", thesis: "", emotion: "", lesson: "", notes: "" });
+        refresh();
+      });
   };
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   return (
     <div>
-      <h1>Journal (V2)</h1>
+      <h1>Journal <span className="muted">· {store === "pg" ? "Postgres" : "file-store"}</span></h1>
+      <p className="muted">Snapshot keputusan di-resolve server-side dari signal milikmu — tidak bisa diarang client.</p>
       <div className="card">
         <h3>New Entry</h3>
-        <label>Trade ID: <input value={form.trade_id} onChange={(e) => setForm({ ...form, trade_id: e.target.value })} size={10} /></label>{" "}
-        <label>Thesis: <input value={form.thesis} onChange={(e) => setForm({ ...form, thesis: e.target.value })} size={20} /></label>{" "}
-        <label>Emotion: <input value={form.emotion} onChange={(e) => setForm({ ...form, emotion: e.target.value })} size={10} /></label>{" "}
-        <label>Notes: <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} size={20} /></label>{" "}
+        <label>Trade ID (paper): <input value={form.trade_id} onChange={set("trade_id")} size={10} /></label>{" "}
+        <label>Signal ID (PG): <input value={form.signal_id} onChange={set("signal_id")} size={32} /></label>
+        <br /><br />
+        <label>Thesis: <input value={form.thesis} onChange={set("thesis")} size={24} /></label>{" "}
+        <label>Emotion: <input value={form.emotion} onChange={set("emotion")} size={10} /></label>{" "}
+        <label>Lesson: <input value={form.lesson} onChange={set("lesson")} size={20} /></label>{" "}
+        <label>Notes: <input value={form.notes} onChange={set("notes")} size={20} /></label>{" "}
         <button onClick={add}>Save</button>
+        {msg && <p className="muted">{msg}</p>}
       </div>
       <div className="card" style={{ marginTop: 12 }}>
-        <table><thead><tr><th>Trade</th><th>Thesis</th><th>Emotion</th><th>Notes</th><th>Snapshot</th></tr></thead>
+        <table><thead><tr><th>Trade</th><th>Signal</th><th>Thesis</th><th>Emotion</th><th>Snapshot</th></tr></thead>
         <tbody>{entries.map((e) => (
-          <tr key={e.id}><td className="mono">{e.trade_id}</td><td>{e.thesis}</td>
-            <td>{e.emotion}</td><td>{e.notes}</td>
-            <td className="mono muted">{JSON.stringify(e.decision_snapshot)}</td></tr>))}</tbody></table>
+          <tr key={e.id}><td className="mono">{e.trade_id || "—"}</td>
+            <td className="mono">{e.signal_id ? e.signal_id.slice(0, 8) : "—"}</td>
+            <td>{e.thesis}</td><td>{e.emotion}</td>
+            <td className="mono muted">{JSON.stringify(e.decision_snapshot).slice(0, 80)}</td></tr>))}</tbody></table>
+        {entries.length === 0 && <p className="muted">Belum ada entry (login untuk PG).</p>}
       </div>
     </div>
   );

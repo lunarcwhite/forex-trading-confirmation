@@ -45,6 +45,7 @@ class TestPersist(unittest.TestCase):
     def tearDown(self):
         with connect() as conn:
             with conn.cursor() as cur:
+                cur.execute("delete from journal_entries where user_id=%s", (self.uid,))
                 setup_ids, version_ids = [], []
                 for sid in self.created_signals:
                     cur.execute("delete from decision_audit_logs where signal_id=%s", (sid,))
