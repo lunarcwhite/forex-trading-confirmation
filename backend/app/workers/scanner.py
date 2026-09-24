@@ -9,15 +9,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "ba
 
 from app.services.analysis.indicators import atr, ema_last, rsi
 from app.services.analysis.structure import classify_structure, find_swings
+from app.candles import candles_for
 from app.services.risk.position import PAIR_DEFAULTS
 from app.services.strategy.rules import aggregate, evaluate_condition
-from app.store import gen_candles
 
 STRATEGIES = ["trend-pullback"]
 
 
 def scan_symbol(symbol: str, timeframe: str = "H1", strategy: str = "trend-pullback") -> dict:
-    cs = gen_candles(symbol, timeframe, 200)
+    cs, source = candles_for(symbol, timeframe, 200)
     closes = [c["close"] for c in cs]
     highs = [c["high"] for c in cs]
     lows = [c["low"] for c in cs]
@@ -45,7 +45,7 @@ def scan_symbol(symbol: str, timeframe: str = "H1", strategy: str = "trend-pullb
         "setup": f"{passed}/{total}",
         "decision": state,
         "missing": [t for t, x, q in results if x != "PASS" and q],
-        "source": "simulator",
+        "source": source,
     }
 
 

@@ -6,10 +6,10 @@ import json
 import os
 import uuid
 
+from app.candles import candles_for
 from app.services.analysis.indicators import atr, ema_last, rsi
 from app.services.analysis.structure import classify_structure, find_swings
 from app.services.strategy.rules import aggregate, evaluate_condition
-from app.store import gen_candles
 
 STORE = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "data", "strategies.json")
 
@@ -38,7 +38,7 @@ FIELDS = ["ema_20", "ema_50", "ema_100", "ema_200", "rsi_14", "atr_14",
 
 
 def resolve_fields(symbol: str, timeframe: str = "H1") -> dict:
-    cs = gen_candles(symbol, timeframe, 200)
+    cs = candles_for(symbol, timeframe, 200)[0]
     closes = [c["close"] for c in cs]
     highs = [c["high"] for c in cs]
     lows = [c["low"] for c in cs]

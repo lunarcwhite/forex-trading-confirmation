@@ -46,14 +46,19 @@ def candles(
 ):
     if symbol not in PAIR_DEFAULTS:
         raise HTTPException(400, "unknown symbol")
-    return {"symbol": symbol, "timeframe": timeframe, "candles": gen_candles(symbol, timeframe, limit)}
+    from app.candles import candles_for
+
+    rows, source = candles_for(symbol, timeframe, limit)
+    return {"symbol": symbol, "timeframe": timeframe, "candles": rows, "source": source}
 
 
 @app.get("/api/v1/analysis", response_model=AnalysisOut)
 def analysis(symbol: str = Query(...), timeframe: str = Query("H1")):
     if symbol not in PAIR_DEFAULTS:
         raise HTTPException(400, "unknown symbol")
-    cs = gen_candles(symbol, timeframe, 200)
+    from app.candles import candles_for
+
+    cs, source = candles_for(symbol, timeframe, 200)
     closes = [c["close"] for c in cs]
     highs = [c["high"] for c in cs]
     lows = [c["low"] for c in cs]
@@ -70,8 +75,8 @@ def analysis(symbol: str = Query(...), timeframe: str = Query("H1")):
         "bias": bias,
         "indicators": {"ema_50": e50, "ema_200": e200, "rsi_14": r, "atr_14": a},
         "structure": st,
-        "data_quality": "ok",
-        "source": "simulator",
+        "data_quality": "ok" if len(cs) >= 34 else "DATA UNAVAILABLE",
+        "source": source,
     }
 
 
@@ -92,7 +97,9 @@ def latest_signal(symbol: str = Query("EUR/USD")):
     plan: dict = {}
     entry_zone: dict = {}
     try:
-        cs = gen_candles(symbol, "H1", 200)
+        from app.candles import candles_for
+
+        cs = candles_for(symbol, "H1", 200)[0]
         closes = [c["close"] for c in cs]
         entry = closes[-1]
         a14 = a["indicators"].get("atr_14")

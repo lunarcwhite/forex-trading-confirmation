@@ -25,7 +25,7 @@ class TestAPI(unittest.TestCase):
         body = r.json()
         self.assertIn(body["bias"], ("bullish", "bearish", "neutral"))
         self.assertIn("ema_50", body["indicators"])
-        self.assertEqual(body["source"], "simulator")
+        self.assertIn(body["source"], ("simulator", "postgres"))
 
     def test_signal_wait_honest(self):
         r = client.get("/api/v1/signals/latest", params={"symbol": "EUR/USD"})
