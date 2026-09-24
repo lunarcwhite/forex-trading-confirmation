@@ -175,3 +175,80 @@ def run_backtest(body: BacktestIn):
     out["symbol"] = body.symbol
     out["timeframe"] = body.timeframe
     return out
+
+
+_broker = None
+
+
+def broker():
+    global _broker
+    if _broker is None:
+        from app.services.trading.paper import PaperBroker
+
+        _broker = PaperBroker()
+    return _broker
+
+
+@app.post("/api/v1/paper/accounts")
+def paper_create_account(body: dict):
+    return broker().create_account(body.get("name", "paper"), float(body.get("balance", 10000)))
+
+
+@app.get("/api/v1/paper/accounts")
+def paper_accounts():
+    return {"accounts": list(broker().state["accounts"].values())}
+
+
+@app.post("/api/v1/paper/orders")
+def paper_order(body: dict):
+    try:
+        return broker().place_order(
+            body["account_id"], body["symbol"], body["direction"],
+            float(body.get("lots", 0.01)), float(body["entry"]),
+            body.get("stop_loss"), body.get("take_profit"), body.get("signal"),
+        )
+    except (KeyError, ValueError) as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/v1/paper/positions")
+def paper_positions(account_id: str = Query(...)):
+    from app.store import gen_candles as _gen
+
+    mark = {}
+    for sym in PAIR_DEFAULTS:
+        cs = _gen(sym, "H1", 1)
+        if cs:
+            mark[sym] = cs[-1]["close"]
+    try:
+        return {"positions": broker().positions(account_id, mark), "env": "SIMULATION"}
+    except KeyError:
+        raise HTTPException(404, "unknown account")
+
+
+@app.post("/api/v1/paper/positions/{pid}/close")
+def paper_close(pid: str, body: dict):
+    try:
+        return broker().close(body["account_id"], pid, float(body["exit"]))
+    except KeyError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.get("/api/v1/paper/trades")
+def paper_trades(account_id: str = Query(...)):
+    return {"trades": broker().trades(account_id), "env": "SIMULATION"}
+
+
+@app.post("/api/v1/journal")
+def journal_add(body: dict):
+    try:
+        return broker().add_journal(
+            body["trade_id"], body.get("thesis", ""),
+            body.get("emotion", ""), body.get("notes", ""))
+    except KeyError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.get("/api/v1/journal")
+def journal_list():
+    return {"entries": broker().journal()}
