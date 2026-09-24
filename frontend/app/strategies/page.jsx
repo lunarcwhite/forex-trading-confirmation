@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { authHeaders } from "../login/page";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 const FIELDS = ["ema_20", "ema_50", "ema_100", "ema_200", "rsi_14", "atr_14",
   "structure_bias", "risk_reward", "spread"];
 const OPS = ["greater_than", "greater_than_or_equal", "less_than", "less_than_or_equal",

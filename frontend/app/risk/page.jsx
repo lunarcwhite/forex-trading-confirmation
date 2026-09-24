@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { authHeaders } from "../login/page";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 const FIELDS = [
   ["risk_per_trade_pct", "Risk/trade %"],

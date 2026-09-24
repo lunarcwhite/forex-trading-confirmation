@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { authHeaders } from "../login/page";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 export default function Journal() {
   const [entries, setEntries] = useState([]);

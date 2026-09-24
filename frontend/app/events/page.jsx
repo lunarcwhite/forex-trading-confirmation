@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { authHeaders } from "../login/page";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 const SAMPLE = "currency,event_name,impact,scheduled_at,source,external_id\nUSD,US CPI,high,2026-10-01T12:30:00+00:00,csv,cpi-oct\nEUR,ECB Rate,medium,2026-10-02T12:15:00+00:00,csv,ecb-oct";
 
 export default function Events() {
