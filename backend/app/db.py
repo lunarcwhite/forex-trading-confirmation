@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 
+import app.env  # noqa: F401  (loads .env for local runs)
 import psycopg
 
 

@@ -11,6 +11,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
+import app.env  # noqa: F401  (loads .env for local runs)
 from app.schemas import (
     AnalysisOut,
     Candle,
