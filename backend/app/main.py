@@ -483,6 +483,25 @@ def paper_order(body: dict, user: str = Depends(current_user)):
         raise HTTPException(400, str(e))
 
 
+@app.post("/api/v1/broker/orders")
+def broker_live_order(body: dict, user: str = Depends(current_user)):
+    """V4 live-execution boundary. Disabled unless explicitly enabled.
+
+    Requires BROKER_LIVE_ENABLED=1 + matching EXECUTION_AUTH_TOKEN +
+    purpose. No live broker is configured in this slice, so an authorized
+    call still ends at 501 (not implemented) — the gate itself is what's
+    tested. Analytical agents can never reach this path (see isolation test).
+    """
+    from app.services.trading.adapter import ExecutionDenied, require_execution_auth
+
+    try:
+        require_execution_auth(body.get("purpose", ""),
+                               body.get("execution_token"))
+    except ExecutionDenied as e:
+        raise HTTPException(403, str(e))
+    raise HTTPException(501, "no live broker configured")
+
+
 @app.get("/api/v1/paper/positions")
 def paper_positions(account_id: str = Query(...)):
     from app.store import gen_candles as _gen

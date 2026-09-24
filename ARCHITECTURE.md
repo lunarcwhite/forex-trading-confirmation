@@ -834,19 +834,26 @@ Trade
 
 # 26. Live Trading Boundary
 
-If broker integration is added later:
+Status (slice 17): boundary implemented, no live broker configured.
 
 ```text
 Decision Engine
       ↓
 Risk Engine
       ↓
-Execution Authorization
+Execution Authorization  ← BROKER_LIVE_ENABLED=1 + EXECUTION_AUTH_TOKEN + purpose
       ↓
-Broker Adapter
+Broker Adapter           ← app/services/trading/adapter.py (PaperBrokerAdapter live)
       ↓
-Broker API
+Broker API               ← none configured → POST /api/v1/broker/orders ends 501
 ```
+
+Rules (tested in tests/test_broker_isolation.py):
+
+- Default closed: gate denies unless all three auth conditions hold.
+- `POST /api/v1/broker/orders` is 403 gated, 501 when authorized (no broker).
+- Analytical packages (ai/decision/analysis/strategy/risk/news) must never
+  import `trading.paper`/`trading.adapter` (AST-scanned).
 
 The AI Analyst must never directly access the broker.
 
