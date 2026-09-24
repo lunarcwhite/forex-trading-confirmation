@@ -7,3 +7,5 @@ data/
 frontend/node_modules/
 frontend/.next/
 frontend/.env.local
+.agents/
+skills-lock.json
