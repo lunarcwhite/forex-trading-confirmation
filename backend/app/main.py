@@ -170,6 +170,43 @@ def event_list(currency: str = Query(""), hours: int = Query(72, le=720)):
     return {"events": list_events(currency, hours)}
 
 
+@app.get("/api/v1/events/source")
+def event_source():
+    """Configured calendar provenance + row sources (public)."""
+    from app.services.news.service import source_status
+
+    if not os.getenv("DATABASE_URL"):
+        raise HTTPException(503, "events need DATABASE_URL")
+    return source_status()
+
+
+@app.post("/api/v1/events/import")
+def event_import(body: dict, user: str = Depends(current_user)):
+    """Bulk import events via CSV text or rows[] (login, per-row report).
+
+    Body: {"csv": "<header + rows>"} or {"rows": [{...}]}.
+    Dedupe on (source, external_id); bad rows reported, never fail-open.
+    """
+    from app.services.news.service import import_rows, parse_csv
+
+    if not os.getenv("DATABASE_URL"):
+        raise HTTPException(503, "events need DATABASE_URL")
+    raw: list[dict] = []
+    errors: list[str] = []
+    if body.get("csv"):
+        raw, errors = parse_csv(body["csv"])
+        if errors and not raw:
+            raise HTTPException(400, "; ".join(errors))
+    elif isinstance(body.get("rows"), list):
+        raw = [{**r, "_line": i + 1} for i, r in enumerate(body["rows"])]
+    else:
+        raise HTTPException(400, "csv text or rows[] required")
+    if len(raw) > 500:
+        raise HTTPException(400, "max 500 rows per import")
+    out = import_rows(raw, default_source="csv")
+    return {"user": user, **out, "errors": errors + out["errors"]}
+
+
 @app.post("/api/v1/risk/validate", response_model=RiskValidateOut)
 def validate_risk(body: RiskValidateIn):
     from app.services.risk.limits import check_limits

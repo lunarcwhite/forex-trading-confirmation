@@ -12,6 +12,7 @@ export default function RootLayout({ children }) {
             <a href="/">Dashboard</a>
             <a href="/scanner">Scanner</a>
             <a href="/risk">Risk</a>
+            <a href="/events">Events</a>
             <a href="/alerts">Alerts</a>
             <a href="/backtest">Backtest <span className="muted">V2</span></a>
             <a href="/paper">Paper <span className="muted">SIM</span></a>
