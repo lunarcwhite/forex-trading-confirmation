@@ -1,7 +1,7 @@
 # Forex Trading Decision Support System — Agent Architecture (`AGENTS.md`)
 
 > **Status:** Canonical Specification · **Version:** 1.0  
-> **Tautan Dokumen:** [README.md](README.md) · [PRD.md](PRD.md) · [SOUL.md](SOUL.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [CALCULATIONS.md](CALCULATIONS.md) · [DATABASE.md](DATABASE.md) · [DESIGN.md](DESIGN.md) · [docs/AGENTS.md](docs/AGENTS.md)
+> **Tautan Dokumen:** [README.md](../README.md) · [PRD.md](PRD.md) · [SOUL.md](SOUL.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [CALCULATIONS.md](CALCULATIONS.md) · [DATABASE.md](DATABASE.md) · [DESIGN.md](DESIGN.md) · [Root AGENTS.md](../AGENTS.md)
 
 ---
 

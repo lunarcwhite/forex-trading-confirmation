@@ -1,7 +1,7 @@
 # Forex Trading Decision Support System — Agent Architecture (`AGENTS.md`)
 
 > **Status:** Canonical Specification · **Version:** 1.0  
-> **Tautan Dokumen:** [README.md](README.md) · [PRD.md](PRD.md) · [SOUL.md](SOUL.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [CALCULATIONS.md](CALCULATIONS.md) · [DATABASE.md](DATABASE.md) · [DESIGN.md](DESIGN.md) · [docs/AGENTS.md](docs/AGENTS.md)
+> **Tautan Dokumen:** [README.md](README.md) · [PRD.md](docs/PRD.md) · [SOUL.md](docs/SOUL.md) · [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [CALCULATIONS.md](docs/CALCULATIONS.md) · [DATABASE.md](docs/DATABASE.md) · [DESIGN.md](docs/DESIGN.md) · [docs/AGENTS.md](docs/AGENTS.md)
 
 ---
 
@@ -585,8 +585,8 @@ A lower-level explanation must never override a higher-level hard constraint.
 
 Any coding agent working on this project must:
 
-1. Read [PRD.md](PRD.md).
-2. Read [SOUL.md](SOUL.md).
+1. Read [docs/PRD.md](docs/PRD.md).
+2. Read [docs/SOUL.md](docs/SOUL.md).
 3. Read [AGENTS.md](AGENTS.md).
 4. Understand the domain before modifying core logic.
 5. Avoid putting trading logic directly into UI components.

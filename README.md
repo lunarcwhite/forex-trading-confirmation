@@ -59,17 +59,17 @@ Proyek ini telah menyelesaikan seluruh tahapan **MVP Phase 1 (Slices 1–17)** d
 
 ## 3. Indeks Dokumentasi Resmi
 
-Dokumentasi sistem dirancang secara holistik dan modular. Anda dapat mengakses dokumen di root atau melalui direktori [`docs/`](docs/):
+Seluruh dokumen spesifikasi teknis dan desain arsitektur terpusat di direktori [`docs/`](docs/). File [`AGENTS.md`](AGENTS.md) juga dipertahankan di root folder sebagai aturan sistem aktif (*System User Rules*) untuk AI assistant:
 
-| Dokumen | Peran & Deskripsi | Tautan Root | Tautan Folder Docs |
-|---|---|---|---|
-| **PRD** | *Product Requirements Document*: visi, persona, alur pengguna, cakupan MVP vs V2 | [PRD.md](PRD.md) | [docs/PRD.md](docs/PRD.md) |
-| **SOUL** | Prinsip dasar, pencegahan FOMO, etika AI, pemisahan observasi vs interpretasi | [SOUL.md](SOUL.md) | [docs/SOUL.md](docs/SOUL.md) |
-| **AGENTS** | Spesifikasi arsitektur multi-agent, batas kewenangan, dan protokol komunikasi | [AGENTS.md](AGENTS.md) | [docs/AGENTS.md](docs/AGENTS.md) |
-| **ARCHITECTURE** | Arsitektur teknis lengkap: FastAPI, Next.js, PostgreSQL, WebSocket, broker isolation | [ARCHITECTURE.md](ARCHITECTURE.md) | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| **CALCULATIONS** | Spesifikasi matematika kanonikal: Wilder smoothing, fractals, BOS, lot sizing, MTF | [CALCULATIONS.md](CALCULATIONS.md) | [docs/CALCULATIONS.md](docs/CALCULATIONS.md) |
-| **DATABASE** | Skema PostgreSQL, diagram ERD, tipe `NUMERIC`, audit trail, dan state machines | [DATABASE.md](DATABASE.md) | [docs/DATABASE.md](docs/DATABASE.md) |
-| **DESIGN** | Desain workstation trading, progressive disclosure, semantic colors, dan UX writing | [DESIGN.md](DESIGN.md) | [docs/DESIGN.md](docs/DESIGN.md) |
+| Dokumen | Peran & Deskripsi | Tautan Dokumen Resmi |
+|---|---|:---:|
+| **PRD** | *Product Requirements Document*: visi, persona, alur pengguna, cakupan MVP vs V2 | [docs/PRD.md](docs/PRD.md) |
+| **SOUL** | Prinsip dasar, pencegahan FOMO, etika AI, pemisahan observasi vs interpretasi | [docs/SOUL.md](docs/SOUL.md) |
+| **AGENTS** | Spesifikasi arsitektur multi-agent, batas kewenangan, dan protokol komunikasi | [AGENTS.md](AGENTS.md) · [docs/AGENTS.md](docs/AGENTS.md) |
+| **ARCHITECTURE** | Arsitektur teknis lengkap: FastAPI, Next.js, PostgreSQL, WebSocket, broker isolation | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| **CALCULATIONS** | Spesifikasi matematika kanonikal: Wilder smoothing, fractals, BOS, lot sizing, MTF | [docs/CALCULATIONS.md](docs/CALCULATIONS.md) |
+| **DATABASE** | Skema PostgreSQL, diagram ERD, tipe `NUMERIC`, audit trail, dan state machines | [docs/DATABASE.md](docs/DATABASE.md) |
+| **DESIGN** | Desain workstation trading, progressive disclosure, semantic colors, dan UX writing | [docs/DESIGN.md](docs/DESIGN.md) |
 
 ---
 
@@ -171,13 +171,7 @@ trading-support-sistem/
 ├── scripts/                   # Utilitas migrasi & database seeding
 ├── tests/                     # Test suite komprehensif (159 tests)
 ├── README.md                  # Peta panduan utama repositori
-├── PRD.md                     # Root link ke PRD
-├── SOUL.md                    # Root link ke AI Soul
-├── AGENTS.md                  # Root link ke Agent Architecture
-├── ARCHITECTURE.md            # Root link ke Arsitektur Teknis
-├── CALCULATIONS.md            # Root link ke Spesifikasi Kalkulasi
-├── DATABASE.md                # Root link ke Desain Basis Data
-└── DESIGN.md                  # Root link ke Desain UI
+└── AGENTS.md                  # Aturan sistem & arsitektur agent IDE
 ```
 
 ---
