@@ -1039,14 +1039,15 @@ GET /signals/latest → Decision Object (#17): state ENTER/WAIT/NO_TRADE + signa
 
 # 33. WebSocket Channels
 
-Example:
+Implemented (minimal in-process slice, no Redis yet — full pub/sub in #21 later):
 
 ```text
-/ws/market/{symbol}
-/ws/analysis/{symbol}
-/ws/scanner
-/ws/alerts
+/ws/market?symbol=EUR/USD&timeframe=H1&interval=5
+/ws/scanner?timeframe=H1&interval=10
 ```
+
+Symbol travels as query param (path params cannot hold `EUR/USD` slashes).
+Interval clamped to 2–60s. Reserved for later: `/ws/analysis`, `/ws/alerts`.
 
 ---
 

@@ -27,6 +27,10 @@ app = FastAPI(title="Trading Decision Support — MVP")
 
 _bearer = HTTPBearer(auto_error=False)
 
+from app.ws import router as ws_router  # noqa: E402
+
+app.include_router(ws_router)
+
 
 def current_user(
     creds: HTTPAuthorizationCredentials | None = Depends(_bearer),

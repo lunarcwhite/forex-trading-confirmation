@@ -10,17 +10,35 @@ export default function Scanner() {
   const [sess, setSess] = useState("");
   const [rows, setRows] = useState(null);
   const [active, setActive] = useState([]);
+  const [live, setLive] = useState(false);
+  const [liveAt, setLiveAt] = useState("");
   useEffect(() => {
     fetch(`${API}/api/v1/scanner?timeframe=${tf}${decision ? `&decision=${decision}` : ""}${sym ? `&symbol=${encodeURIComponent(sym)}` : ""}${sess ? `&session=${encodeURIComponent(sess)}` : ""}`)
       .then((r) => r.json())
       .then((j) => { setRows(j.rows); setActive(j.active_sessions || []); });
   }, [decision, tf, sym, sess]);
+  useEffect(() => {
+    if (!live) return;
+    const url = `${API.replace(/^http/, "ws")}/ws/scanner?timeframe=${tf}&interval=5`;
+    const sock = new WebSocket(url);
+    sock.onmessage = (ev) => {
+      try {
+        const m = JSON.parse(ev.data);
+        if (m.rows) { setRows(m.rows); setActive(m.active_sessions || []); setLiveAt(m.at); }
+      } catch { /* keep last snapshot */ }
+    };
+    sock.onerror = () => setLive(false);
+    return () => sock.close();
+  }, [live, tf]);
   const SYMS = ["", "EUR/USD", "GBP/USD", "USD/JPY", "XAU/USD"];
   const SESS = ["", "Sydney", "Tokyo", "London", "New York"];
   return (
     <div>
       <h1>Market Scanner</h1>
-      <p className="muted">Sesi aktif: {active.join(", ") || "—"}</p>
+      <p className="muted">Sesi aktif: {active.join(", ") || "—"} ·{" "}
+        <button onClick={() => setLive(!live)}>{live ? "● Live" : "○ Live"}</button>
+        {liveAt && <span className="mono"> tick {liveAt.slice(11, 19)}</span>}
+        <span> (WS in-process, tanpa Redis)</span></p>
       <label>TF: <select value={tf} onChange={(e) => setTf(e.target.value)}>
         <option>M5</option><option>M15</option><option>H1</option><option>H4</option><option>D1</option>
       </select></label> <label>Pair: <select value={sym} onChange={(e) => setSym(e.target.value)}>
