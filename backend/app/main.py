@@ -137,7 +137,29 @@ def validate_risk(body: RiskValidateIn):
 
 @app.get("/api/v1/strategies")
 def strategies():
-    return {"strategies": PRESETS, "note": "read-only presets in MVP"}
+    from app.services.strategy.service import list_strategies
+
+    return {"strategies": list_strategies(), "note": "presets read-only, custom via POST"}
+
+
+@app.post("/api/v1/strategies")
+def strategy_create(body: dict):
+    from app.services.strategy.service import create_strategy
+
+    if not body.get("name") or not isinstance(body.get("rules"), list):
+        raise HTTPException(400, "name + rules[] required")
+    return create_strategy(body["name"], body.get("direction", "buy"), body["rules"])
+
+
+@app.post("/api/v1/strategies/evaluate")
+def strategy_evaluate(body: dict):
+    from app.services.strategy.service import evaluate_rules, resolve_fields
+
+    rules = body.get("rules", [])
+    symbol = body.get("symbol", "EUR/USD")
+    values = resolve_fields(symbol, body.get("timeframe", "H1"))
+    return {"symbol": symbol, "values": values,
+            **evaluate_rules(rules, values, body.get("direction", "buy"))}
 
 
 @app.get("/api/v1/alerts")
