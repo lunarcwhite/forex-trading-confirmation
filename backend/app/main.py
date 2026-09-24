@@ -126,3 +126,13 @@ def strategies():
 @app.get("/api/v1/alerts")
 def alerts():
     return {"alerts": [], "channel": "in-app", "note": "MVP in-app only"}
+
+
+@app.get("/api/v1/scanner")
+def scanner(
+    timeframe: str = Query("H1"),
+    decision: str = Query("", pattern="^(|ENTER|WAIT|NO_TRADE)$"),
+):
+    from app.workers.scanner import scan_all
+
+    return {"rows": scan_all(timeframe, decision), "source": "simulator"}
