@@ -67,6 +67,15 @@ class TestAPI(unittest.TestCase):
         self.assertIn("assumptions", body)
         self.assertIn("win_rate", body)
 
+    def test_cors_for_frontend(self):
+        # Browser fetch from :3000 is cross-origin; without this header
+        # the dashboard shows "Failed to fetch".
+        r = client.get("/api/v1/markets",
+                       headers={"Origin": "http://localhost:3000"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.headers.get("access-control-allow-origin"),
+                         "http://localhost:3000")
+
 
 if __name__ == "__main__":
     unittest.main()

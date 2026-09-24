@@ -25,6 +25,18 @@ from app.store import gen_candles
 
 app = FastAPI(title="Trading Decision Support — MVP")
 
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        os.getenv("FRONTEND_URL", "http://localhost:3000"),
+        "http://127.0.0.1:3000",
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 _bearer = HTTPBearer(auto_error=False)
 
 from app.ws import router as ws_router  # noqa: E402
