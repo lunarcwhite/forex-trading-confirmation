@@ -12,9 +12,24 @@
   --amber: #f59e0b;
   --red: #ef4444;
   --blue: #3b82f6;
+  --blue-fill: #1d4ed8;
   --radius-card: 10px;
   --radius-ctl: 6px;
   --radius-pill: 20px;
+}
+/* Light theme: same tokens, same hierarchy (R-34: both modes fully work). */
+[data-theme="light"] {
+  --bg: #f2f5f9;
+  --panel: #ffffff;
+  --panel-2: #e8edf4;
+  --line: #d5dde8;
+  --text: #16202e;
+  --muted: #55677f;
+  --green: #15803d;
+  --amber: #b45309;
+  --red: #dc2626;
+  --blue: #1d4ed8;
+  --blue-fill: #1d4ed8;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text);
@@ -69,7 +84,7 @@ button, .btn { background: var(--panel-2); color: var(--text); border: 1px solid
   border-radius: var(--radius-ctl); padding: 8px 14px; font-size: 0.9rem; cursor: pointer; }
 button:hover, .btn:hover { border-color: var(--blue); }
 button:disabled { opacity: 0.45; cursor: default; }
-button.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+button.primary { background: var(--blue-fill); border-color: var(--blue-fill); color: #fff; font-weight: 600; }
 button.on { border-color: var(--green); color: var(--green); font-weight: 700; }
 input, select, textarea { background: var(--bg); color: var(--text); border: 1px solid var(--line);
   border-radius: var(--radius-ctl); padding: 8px 10px; font-size: 0.9rem; font-family: inherit; }
@@ -80,7 +95,7 @@ label { font-size: 0.9rem; }
 .seg { display: inline-flex; gap: 2px; background: var(--panel); border: 1px solid var(--line);
   border-radius: var(--radius-ctl); padding: 2px; }
 .seg button { border: 0; background: transparent; padding: 6px 12px; }
-.seg button[aria-current="true"] { background: var(--blue); color: #fff; font-weight: 600; }
+.seg button[aria-current="true"] { background: var(--blue-fill); color: #fff; font-weight: 600; }
 
 /* Tables: deciding column early, horizontal scroll on narrow screens. */
 .tbl-wrap { overflow-x: auto; }

@@ -15,7 +15,7 @@ function Chart({ candles }) {
   const w = W / data.length;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Grafik candlestick"
-      style={{ background: "#0b0e14", borderRadius: 8 }}>
+      style={{ background: "var(--bg)", borderRadius: 8, border: "1px solid var(--line)" }}>
       {data.map((c, i) => {
         const up = c.close >= c.open;
         const col = up ? "#22c55e" : "#ef4444";
