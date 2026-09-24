@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { authHeaders } from "../login/page";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const FIELDS = ["ema_20", "ema_50", "ema_100", "ema_200", "rsi_14", "atr_14",
@@ -30,7 +31,7 @@ export default function Builder() {
   };
   const save = () => {
     fetch(`${API}/api/v1/strategies`, { method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ name, direction: "buy", rules }) })
       .then((r) => r.json()).then((j) => alert(`Saved: ${j.id}`));
   };

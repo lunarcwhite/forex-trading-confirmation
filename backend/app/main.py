@@ -7,7 +7,8 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from app.schemas import (
@@ -25,6 +26,19 @@ from app.services.strategy.rules import aggregate, evaluate_condition
 from app.store import gen_candles
 
 app = FastAPI(title="Trading Decision Support — MVP")
+
+_bearer = HTTPBearer(auto_error=False)
+
+
+def current_user(
+    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> str:
+    from app.auth import decode_token
+
+    uid = decode_token(creds.credentials) if creds else None
+    if not uid:
+        raise HTTPException(401, "login required")
+    return uid
 
 PRESETS = [
     {"id": "trend-following", "name": "Trend Following", "direction": "both"},
@@ -150,7 +164,7 @@ def strategies():
 
 
 @app.post("/api/v1/strategies")
-def strategy_create(body: dict):
+def strategy_create(body: dict, user: str = Depends(current_user)):
     from app.services.strategy.service import create_strategy
 
     if not body.get("name") or not isinstance(body.get("rules"), list):
@@ -212,14 +226,16 @@ _broker = None
 def broker():
     global _broker
     if _broker is None:
-        from app.services.trading.paper import PaperBroker
+        import os as _os
 
-        _broker = PaperBroker()
+        from app.services.trading.paper import STORE, PaperBroker
+
+        _broker = PaperBroker(path=_os.getenv("PAPER_STORE", STORE))
     return _broker
 
 
 @app.post("/api/v1/paper/accounts")
-def paper_create_account(body: dict):
+def paper_create_account(body: dict, user: str = Depends(current_user)):
     return broker().create_account(body.get("name", "paper"), float(body.get("balance", 10000)))
 
 
@@ -229,7 +245,7 @@ def paper_accounts():
 
 
 @app.post("/api/v1/paper/orders")
-def paper_order(body: dict):
+def paper_order(body: dict, user: str = Depends(current_user)):
     try:
         return broker().place_order(
             body["account_id"], body["symbol"], body["direction"],
@@ -256,7 +272,7 @@ def paper_positions(account_id: str = Query(...)):
 
 
 @app.post("/api/v1/paper/positions/{pid}/close")
-def paper_close(pid: str, body: dict):
+def paper_close(pid: str, body: dict, user: str = Depends(current_user)):
     try:
         return broker().close(body["account_id"], pid, float(body["exit"]))
     except KeyError as e:
@@ -269,7 +285,7 @@ def paper_trades(account_id: str = Query(...)):
 
 
 @app.post("/api/v1/journal")
-def journal_add(body: dict):
+def journal_add(body: dict, user: str = Depends(current_user)):
     try:
         return broker().add_journal(
             body["trade_id"], body.get("thesis", ""),

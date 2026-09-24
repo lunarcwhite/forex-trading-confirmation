@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { authHeaders } from "../login/page";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -11,7 +12,7 @@ export default function Journal() {
   useEffect(() => { refresh(); }, []);
   const add = () => {
     fetch(`${API}/api/v1/journal`, { method: "POST",
-      headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) })
+      headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(form) })
       .then((r) => { if (r.ok) { setForm({ trade_id: "", thesis: "", emotion: "", notes: "" }); refresh(); } });
   };
   return (

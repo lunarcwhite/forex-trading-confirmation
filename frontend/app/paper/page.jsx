@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { authHeaders } from "../login/page";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const SYMS = ["EUR/USD", "GBP/USD", "USD/JPY", "XAU/USD"];
@@ -27,7 +28,7 @@ export default function Paper() {
 
   const create = () => {
     fetch(`${API}/api/v1/paper/accounts`, { method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ name, balance: 10000 }) })
       .then((r) => r.json()).then((a) => { setAccounts([...accounts, a]); setAcc(a.id); });
   };
@@ -39,7 +40,7 @@ export default function Paper() {
   };
   const order = () => {
     fetch(`${API}/api/v1/paper/orders`, { method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ account_id: acc, symbol: form.symbol, direction: form.direction,
         lots: parseFloat(form.lots), entry: parseFloat(form.entry),
         stop_loss: form.sl ? parseFloat(form.sl) : null,
@@ -48,7 +49,7 @@ export default function Paper() {
   };
   const close = (pid, exit) => {
     fetch(`${API}/api/v1/paper/positions/${pid}/close`, { method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ account_id: acc, exit: parseFloat(exit) }) })
       .then(() => refresh(acc));
   };
