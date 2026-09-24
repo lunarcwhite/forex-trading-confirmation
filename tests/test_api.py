@@ -32,6 +32,8 @@ class TestAPI(unittest.TestCase):
         body = r.json()
         self.assertEqual(body["state"], "WAIT")
         self.assertIn("price_action", body["missing_conditions"])
+        self.assertIn("min", body["entry_zone"])
+        self.assertAlmostEqual(body["risk"]["risk_reward"], 2.0)
 
     def test_risk_validate(self):
         r = client.post(

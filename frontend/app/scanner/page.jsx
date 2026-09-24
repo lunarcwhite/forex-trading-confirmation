@@ -5,16 +5,19 @@ const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function Scanner() {
   const [decision, setDecision] = useState("");
+  const [tf, setTf] = useState("H1");
   const [rows, setRows] = useState(null);
   useEffect(() => {
-    fetch(`${API}/api/v1/scanner?timeframe=H1${decision ? `&decision=${decision}` : ""}`)
+    fetch(`${API}/api/v1/scanner?timeframe=${tf}${decision ? `&decision=${decision}` : ""}`)
       .then((r) => r.json())
       .then((j) => setRows(j.rows));
-  }, [decision]);
+  }, [decision, tf]);
   return (
     <div>
       <h1>Market Scanner</h1>
-      <label>Decision: <select value={decision} onChange={(e) => setDecision(e.target.value)}>
+      <label>TF: <select value={tf} onChange={(e) => setTf(e.target.value)}>
+        <option>M5</option><option>M15</option><option>H1</option><option>H4</option><option>D1</option>
+      </select></label> <label>Decision: <select value={decision} onChange={(e) => setDecision(e.target.value)}>
         <option value="">All</option>
         <option>ENTER</option>
         <option>WAIT</option>

@@ -18,6 +18,7 @@ from app.schemas import (
 )
 from app.services.analysis.indicators import atr, ema_last, rsi
 from app.services.analysis.structure import classify_structure, find_swings
+from app.services.analysis.zones import suggest_sltp
 from app.services.risk.position import PAIR_DEFAULTS, position_size_lots, risk_reward
 from app.services.strategy.rules import aggregate, evaluate_condition
 from app.store import gen_candles
@@ -86,6 +87,21 @@ def latest_signal(symbol: str = Query("EUR/USD")):
     ]
     state = aggregate(results, direction="buy", structure_bias=a["bias"])
     missing = [t for t, r, q in results if r != "PASS" and q]
+    # ATR-based trade plan (honest proxy; zone detection V1.1). Entry = last close.
+    plan: dict = {}
+    entry_zone: dict = {}
+    try:
+        cs = gen_candles(symbol, "H1", 200)
+        closes = [c["close"] for c in cs]
+        entry = closes[-1]
+        a14 = a["indicators"].get("atr_14")
+        if a14:
+            zl, zh = entry - 0.5 * a14, entry
+            plan = suggest_sltp("buy", entry, zl, zh, a14, 0.0, 2.0)
+            if "error" not in plan:
+                entry_zone = {"min": zl, "max": zh}
+    except (IndexError, TypeError, KeyError):
+        plan = {}
     return {
         "symbol": symbol,
         "direction": "BUY",
@@ -93,8 +109,8 @@ def latest_signal(symbol: str = Query("EUR/USD")):
         "confirmations": [t for t, r, _ in results if r == "PASS"],
         "missing_conditions": missing,
         "invalidations": [],
-        "entry_zone": {},
-        "risk": {},
+        "entry_zone": entry_zone,
+        "risk": plan,
     }
 
 
