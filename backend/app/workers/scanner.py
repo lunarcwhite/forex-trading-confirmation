@@ -1,58 +1,101 @@
-"""Scanner worker: multi-pair decision matrix. MVP read-only."""
+"""Scanner worker: multi-pair decision matrix. MVP read-only.
+
+Decision logic lives in app.services.decision.evaluate (single source of
+truth shared with /api/v1/signals/latest). This module only projects it
+into scanner rows plus PRD-11 filters (pair/timeframe/strategy/session).
+"""
 
 from __future__ import annotations
 
 import os
 import sys
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "backend"))
 
-from app.services.analysis.indicators import atr, ema_last, rsi
-from app.services.analysis.structure import classify_structure, find_swings
-from app.candles import candles_for
+from app.services.decision.evaluate import evaluate
 from app.services.risk.position import PAIR_DEFAULTS
-from app.services.strategy.rules import aggregate, evaluate_condition
 
 STRATEGIES = ["trend-pullback"]
 
+# Pair relevance per session (standard forex map; documented, not measured).
+SESSION_PAIRS = {
+    "Sydney": ["AUD/USD", "NZD/USD"],
+    "Tokyo": ["USD/JPY"],
+    "London": ["EUR/USD", "GBP/USD", "XAU/USD"],
+    "New York": ["EUR/USD", "GBP/USD", "USD/JPY", "XAU/USD"],
+}
+
+_FALLBACK_SESSIONS = [
+    ("Sydney", "21:00", "06:00"),
+    ("Tokyo", "00:00", "09:00"),
+    ("London", "08:00", "17:00"),
+    ("New York", "13:00", "22:00"),
+]
+
+
+def _in_window(now: str, start: str, end: str) -> bool:
+    if start <= end:
+        return start <= now < end
+    return now >= start or now < end  # overnight wrap
+
+
+def active_sessions(at: str | None = None) -> list[str]:
+    """Sessions open now (UTC). Reads market_sessions, falls back to reference."""
+    now = at or datetime.now(timezone.utc).strftime("%H:%M")
+    rows: list[tuple] = []
+    if os.getenv("DATABASE_URL"):
+        try:
+            from app.db import connect
+
+            with connect() as conn:
+                rows = conn.execute(
+                    "select name, start_time::text, end_time::text"
+                    " from market_sessions").fetchall()
+        except Exception:
+            rows = []
+    sessions = [(r[0], str(r[1])[:5], str(r[2])[:5]) for r in rows] or _FALLBACK_SESSIONS
+    return [name for name, s, e in sessions if _in_window(now, s, e)]
+
+
+def pair_sessions(symbol: str) -> list[str]:
+    return [s for s, pairs in SESSION_PAIRS.items() if symbol in pairs]
+
 
 def scan_symbol(symbol: str, timeframe: str = "H1", strategy: str = "trend-pullback") -> dict:
-    cs, source = candles_for(symbol, timeframe, 200)
-    closes = [c["close"] for c in cs]
-    highs = [c["high"] for c in cs]
-    lows = [c["low"] for c in cs]
-    e50, e200, r = ema_last(closes, 50), ema_last(closes, 200), rsi(closes, 14)
-    sh, sl = find_swings(highs, lows, 2)
-    st = classify_structure(sh, sl)
-    bias = "bullish" if e50 and e200 and e50 > e200 else "neutral"
-    if st["bias"] == "bearish":
-        bias = "bearish"
-    results = [
-        ("trend", evaluate_condition(e50, "greater_than", ref=e200), True),
-        ("momentum", evaluate_condition(r, "greater_than_or_equal", value=50), True),
-        ("structure", evaluate_condition(bias, "in", value=["bullish"]), True),
-        ("price_action", "NOT_READY", True),
-        ("risk", evaluate_condition(2.0, "greater_than_or_equal", value=2), True),
-    ]
-    state = aggregate(results, direction="buy", structure_bias=bias)
-    passed = sum(1 for _, x, q in results if x == "PASS" and q)
-    total = sum(1 for _, _, q in results if q)
+    ev = evaluate(symbol, timeframe)
+    total = len(ev["confirmations"]) + len(ev["missing_conditions"])
+    passed = len(ev["confirmations"])
     return {
         "symbol": symbol,
         "strategy": strategy,
         "timeframe": timeframe,
-        "bias": bias,
+        "bias": ev["bias"],
         "setup": f"{passed}/{total}",
-        "decision": state,
-        "missing": [t for t, x, q in results if x != "PASS" and q],
-        "source": source,
+        "decision": ev["state"],
+        "missing": ev["missing_conditions"],
+        "mtf": ev["mtf"]["alignment"],
+        "sessions": pair_sessions(symbol),
+        "source": ev["source"],
     }
 
 
-def scan_all(timeframe: str = "H1", decision_filter: str = "") -> list[dict]:
-    rows = [scan_symbol(s, timeframe) for s in PAIR_DEFAULTS]
+def scan_all(timeframe: str = "H1", decision_filter: str = "",
+             symbol: str = "", strategy: str = "trend-pullback",
+             session: str = "") -> list[dict]:
+    if strategy not in STRATEGIES:
+        raise ValueError(f"unknown strategy: {strategy}")
+    if session and session not in SESSION_PAIRS:
+        raise ValueError(f"unknown session: {session}")
+    syms = [symbol] if symbol else list(PAIR_DEFAULTS)
+    for s in syms:
+        if s not in PAIR_DEFAULTS:
+            raise ValueError(f"unknown symbol: {s}")
+    rows = [scan_symbol(s, timeframe, strategy) for s in syms]
     if decision_filter:
         rows = [r for r in rows if r["decision"] == decision_filter]
+    if session:
+        rows = [r for r in rows if session in r["sessions"]]
     return rows
 
 
@@ -63,8 +106,12 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--timeframe", default="H1")
     p.add_argument("--decision", default="")
+    p.add_argument("--symbol", default="")
+    p.add_argument("--strategy", default="trend-pullback")
+    p.add_argument("--session", default="")
     a = p.parse_args()
-    print(json.dumps(scan_all(a.timeframe, a.decision or ""), indent=2))
+    print(json.dumps(scan_all(a.timeframe, a.decision or "", a.symbol,
+                              a.strategy, a.session or ""), indent=2))
 
 
 if __name__ == "__main__":

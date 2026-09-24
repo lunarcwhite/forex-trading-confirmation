@@ -23,6 +23,7 @@ class AnalysisOut(BaseModel):
     structure: dict
     data_quality: str = "ok"
     source: str = "simulator"
+    mtf: dict = Field(default_factory=dict)
 
 
 class DecisionOut(BaseModel):
@@ -38,6 +39,9 @@ class DecisionOut(BaseModel):
     confirmations: list = Field(default_factory=list)
     missing_conditions: list = Field(default_factory=list)
     invalidations: list = Field(default_factory=list)
+    evidence: dict = Field(default_factory=dict)
+    mtf: dict = Field(default_factory=dict)
+    news: dict = Field(default_factory=dict)
 
 
 class RiskValidateIn(BaseModel):
@@ -48,6 +52,16 @@ class RiskValidateIn(BaseModel):
     take_profit: float
     pair: str
     price: float | None = None
+    min_rr: float = 2.0
+    spread: float | None = None
+    max_spread: float | None = None
+    max_lots: float | None = None
+    exposure_pct: float | None = None
+    max_exposure_pct: float | None = None
+    open_positions: int | None = None
+    max_open_positions: int | None = None
+    daily_loss_pct: float | None = None
+    max_daily_loss_pct: float | None = None
 
 
 class RiskValidateOut(BaseModel):
@@ -56,3 +70,31 @@ class RiskValidateOut(BaseModel):
     sl_pips: float
     risk_reward: float
     status: str  # pass/fail
+    failures: list = Field(default_factory=list)
+    rules: list = Field(default_factory=list)
+
+
+class ExplainOut(BaseModel):
+    symbol: str
+    direction: str
+    state: str  # echoed engine decision, never mutated
+    strategy: str = "Trend Pullback"
+    bias: str = "neutral"
+    headline: str = ""
+    summary: str = ""
+    score: str = "0/0"
+    confirmed: list = Field(default_factory=list)
+    missing: list = Field(default_factory=list)
+    missing_conditions: list = Field(default_factory=list)
+    what_needs_to_happen: list = Field(default_factory=list)
+    invalidations: list = Field(default_factory=list)
+    risk_note: str = ""
+    news_note: str = ""
+    news: dict = Field(default_factory=dict)
+    uncertainty: str = ""
+    mtf: dict = Field(default_factory=dict)
+    mtf_note: str = ""
+    data_quality: str = "ok"
+    provider: str = "template"
+    engine_version: str = "analyst-v1"
+    guardrail_violations: list = Field(default_factory=list)

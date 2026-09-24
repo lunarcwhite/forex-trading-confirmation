@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { authHeaders } from "../../login/page";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const TFS = ["M5", "M15", "H1", "H4", "D1"];
@@ -41,17 +42,22 @@ export default function MarketDetail({ params }) {
   const [bal, setBal] = useState("1000");
   const [riskPct, setRiskPct] = useState("1");
   const [pos, setPos] = useState(null);
+  const [ai, setAi] = useState(null);
+  const [recMsg, setRecMsg] = useState("");
+  const [recents, setRecents] = useState([]);
 
   useEffect(() => {
-    setAn(null); setSig(null); setCandles(null); setErr(""); setPos(null);
+    setAn(null); setSig(null); setCandles(null); setErr(""); setPos(null); setAi(null);
     Promise.all([
       fetch(`${API}/api/v1/analysis?symbol=${encodeURIComponent(symbol)}&timeframe=${tf}`).then((r) => {
         if (!r.ok) throw new Error(r.statusText); return r.json();
       }),
       fetch(`${API}/api/v1/signals/latest?symbol=${encodeURIComponent(symbol)}`).then((r) => r.json()),
       fetch(`${API}/api/v1/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${tf}&limit=120`).then((r) => r.json()),
-    ]).then(([a, s, c]) => { setAn(a); setSig(s); setCandles(c.candles); })
+      fetch(`${API}/api/v1/ai/explain?symbol=${encodeURIComponent(symbol)}`).then((r) => r.json()).catch(() => null),
+    ]).then(([a, s, c, e]) => { setAn(a); setSig(s); setCandles(c.candles); setAi(e); })
       .catch((e) => setErr(`Market data unavailable: ${e}`));
+    loadRecents();
   }, [symbol, tf]);
 
   const calc = () => {
@@ -64,6 +70,38 @@ export default function MarketDetail({ params }) {
         take_profit: sig.risk.take_profit, pair: symbol,
       }),
     }).then((r) => r.json()).then(setPos);
+  };
+
+  const loadRecents = () => {
+    fetch(`${API}/api/v1/signals?symbol=${encodeURIComponent(symbol)}&limit=5`,
+      { headers: authHeaders() })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((j) => setRecents(j.signals))
+      .catch(() => setRecents([]));
+  };
+
+  const NEXT = { generated: ["active", "expired"],
+    active: ["executed", "ignored", "expired", "invalidated"] };
+
+  const move = (id, st) => {
+    fetch(`${API}/api/v1/signals/${id}/status`, {
+      method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ status: st }),
+    }).then(() => loadRecents());
+  };
+
+  const record = () => {
+    setRecMsg("");
+    fetch(`${API}/api/v1/signals`, {
+      method: "POST", headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ symbol }),
+    }).then(async (r) => {
+      const j = await r.json();
+      if (r.status === 401) { setRecMsg("Login dulu untuk merekam keputusan."); return; }
+      if (!r.ok) { setRecMsg(j.detail || "gagal merekam"); return; }
+      setRecMsg(`Terekam: ${j.state} (${j.score})`);
+      loadRecents();
+    }).catch((e) => setRecMsg(String(e)));
   };
 
   if (err) return <div><h1>{symbol}</h1><p>{err}</p></div>;
@@ -80,8 +118,19 @@ export default function MarketDetail({ params }) {
             background: t === tf ? "#3b82f6" : "#1e2638", color: "#fff", border: 0 }}>
           {t}</button>))}
         <span className="muted"> · source: {an.source}</span></div>
-      <p><span className={`badge ${sig.state}`}>{sig.state}</span> <span className="muted">{an.bias} bias</span></p>
+      <p><span className={`badge ${sig.state}`}>{sig.state}</span> <span className="muted">{an.bias} bias · news {sig.news?.state || "OFF"}</span>{" "}
+        <button onClick={record} style={{ marginLeft: 8 }}>Record decision</button></p>
+      {recMsg && <p className="muted">{recMsg}</p>}
       <div className="card"><h3>Chart ({tf})</h3><Chart candles={candles} /></div>
+      {an.mtf?.biases && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <h3>MTF Analysis <span className="muted">· {an.mtf.alignment}</span></h3>
+          <table><tbody>
+            {["D1", "H4", "H1", "M15", "M5"].map((t) => (
+              <tr key={t}><td>{t}</td><td>{an.mtf.biases[t] ?? "—"}</td>
+                <td>{an.mtf.biases[t] === "bullish" ? "✓" : an.mtf.biases[t] === "bearish" ? "✕" : "○"}</td></tr>))}
+          </tbody></table>
+        </div>)}
       <div className="grid2" style={{ marginTop: 12 }}>
         <div className="card">
           <h3>Confirmation Matrix</h3>
@@ -95,7 +144,7 @@ export default function MarketDetail({ params }) {
         </div>
         <div className="card">
           <h3>Trade Plan (ATR-based)</h3>
-          <p className="mono">Entry zone {f5(sig.entry_zone.min)} – {f5(sig.entry_zone.max)}</p>
+          <p className="mono">Entry zone {f5(sig.entry_zone.min)} – {f5(sig.entry_zone.max)} <span className="muted">({sig.entry_zone.source})</span></p>
           <p className="mono">Entry {f5(sig.risk.entry)}</p>
           <p className="mono">SL {f5(sig.risk.stop_loss)}</p>
           <p className="mono">TP {f5(sig.risk.take_profit)}</p>
@@ -106,8 +155,48 @@ export default function MarketDetail({ params }) {
           <button onClick={calc}>Calculate</button>
           {pos && !pos.lots && <p>{JSON.stringify(pos)}</p>}
           {pos?.lots !== undefined && (
-            <p className="mono">Risk ${pos.risk_amount} · {pos.sl_pips?.toFixed?.(1)} pips · <strong>{pos.lots} lot</strong> · {pos.status}</p>)}
+            <><p className="mono">Risk ${pos.risk_amount} · {pos.sl_pips?.toFixed?.(1)} pips · <strong>{pos.lots} lot</strong> · {pos.status}</p>
+              {pos.failures?.length > 0 && (
+                <ul>{pos.failures.map((f) => <li key={f}>✕ {f}</li>)}</ul>)}
+              {pos.rules?.filter((r) => r.result === "SKIP").length > 0 && (
+                <p className="muted">Skipped: {pos.rules.filter((r) => r.result === "SKIP").map((r) => r.rule).join(", ")} (tanpa pengukuran)</p>)}
+            </>)}
         </div>
+      </div>
+      <div className="card" style={{ marginTop: 12 }}>
+        <h3>AI Analyst</h3>
+        {!ai ? <p className="muted">Memuat penjelasan…</p> : (
+          <>
+            <p><strong>{ai.headline}</strong></p>
+            <p>{ai.summary}</p>
+            {ai.confirmed?.length > 0 && (
+              <><h4>Terkonfirmasi ({ai.score})</h4>
+              <ul>{ai.confirmed.map((c, i) => <li key={i}>✓ {c}</li>)}</ul></>)}
+            {ai.missing?.length > 0 && (
+              <><h4>Belum terpenuhi</h4>
+              <ul>{ai.missing.map((m, i) => <li key={i}>○ {m}</li>)}</ul></>)}
+            {ai.what_needs_to_happen?.length > 0 && (
+              <><h4>Agar entry valid</h4>
+              <ol>{ai.what_needs_to_happen.map((w, i) => <li key={i}>{w}</li>)}</ol></>)}
+            {ai.invalidations?.length > 0 && (
+              <><h4>Setup batal jika</h4>
+              <ul>{ai.invalidations.map((v, i) => <li key={i}>✕ {v}</li>)}</ul></>)}
+            <p className="muted">{ai.risk_note}</p>
+            {ai.mtf_note && <p className="muted">{ai.mtf_note}</p>}
+            <p className="muted">{ai.news_note}</p>
+            <p className="muted">{ai.uncertainty}</p>
+          </>
+        )}
+      </div>
+      <div className="card" style={{ marginTop: 12 }}>
+        <h3>Recorded Signals</h3>
+        {recents.length === 0
+          ? <p className="muted">Belum ada (login + Record decision).</p>
+          : <ul>{recents.map((s) => (
+            <li key={s.id} className="mono">{s.generated_at} — {s.decision} {s.direction} [{s.status}]
+              {(NEXT[s.status] || []).map((n) => (
+                <button key={n} onClick={() => move(s.id, n)}
+                  style={{ marginLeft: 6, padding: "2px 8px" }}>{n}</button>))}</li>))}</ul>}
       </div>
     </div>
   );

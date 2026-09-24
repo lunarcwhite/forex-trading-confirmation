@@ -30,7 +30,7 @@ export default function Dashboard() {
             <p><span className={`badge ${r.decision}`}>
               {r.decision === "ENTER" ? "✓ ENTER" : r.decision === "WAIT" ? "○ WAIT" : "× NO TRADE"}
             </span></p>
-            <p className="mono muted">{r.setup} · {r.strategy}</p>
+            <p className="mono muted">{r.setup} · {r.strategy} · MTF {r.mtf}</p>
             <a href={`/market/${encodeURIComponent(r.symbol)}`}>View Analysis</a>
           </div>
         ))}

@@ -11,7 +11,7 @@ export default function Paper() {
   const [positions, setPositions] = useState([]);
   const [trades, setTrades] = useState([]);
   const [name, setName] = useState("paper-1");
-  const [form, setForm] = useState({ symbol: "EUR/USD", direction: "buy", lots: "0.01", entry: "", sl: "", tp: "" });
+  const [form, setForm] = useState({ symbol: "EUR/USD", direction: "buy", lots: "0.01", entry: "", sl: "", tp: "", signal_id: "" });
 
   const refresh = (id) => {
     if (!id) return;
@@ -44,7 +44,8 @@ export default function Paper() {
       body: JSON.stringify({ account_id: acc, symbol: form.symbol, direction: form.direction,
         lots: parseFloat(form.lots), entry: parseFloat(form.entry),
         stop_loss: form.sl ? parseFloat(form.sl) : null,
-        take_profit: form.tp ? parseFloat(form.tp) : null }) })
+        take_profit: form.tp ? parseFloat(form.tp) : null,
+        signal_id: form.signal_id || undefined }) })
       .then(() => refresh(acc));
   };
   const close = (pid, exit) => {
@@ -74,6 +75,7 @@ export default function Paper() {
         <label>Entry: <input value={form.entry} onChange={(e) => setForm({ ...form, entry: e.target.value })} size={9} /></label>{" "}
         <label>SL: <input value={form.sl} onChange={(e) => setForm({ ...form, sl: e.target.value })} size={9} /></label>{" "}
         <label>TP: <input value={form.tp} onChange={(e) => setForm({ ...form, tp: e.target.value })} size={9} /></label>{" "}
+        <label>Signal ID: <input value={form.signal_id} onChange={(e) => setForm({ ...form, signal_id: e.target.value })} size={10} placeholder="opsional" /></label>{" "}
         <button onClick={loadSignal}>Load signal</button> <button onClick={order}>Place (sim)</button>
       </div>
       <div className="card" style={{ marginTop: 12 }}>

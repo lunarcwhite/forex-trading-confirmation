@@ -45,6 +45,17 @@ class TestAPI(unittest.TestCase):
         self.assertAlmostEqual(r.json()["lots"], 0.03)
         self.assertEqual(r.json()["status"], "pass")
 
+    def test_ai_explain_echoes_engine(self):
+        sig = client.get("/api/v1/signals/latest", params={"symbol": "EUR/USD"}).json()
+        r = client.get("/api/v1/ai/explain", params={"symbol": "EUR/USD"})
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertEqual(body["state"], sig["state"])  # never mutated
+        self.assertEqual(body["missing_conditions"], sig["missing_conditions"])
+        self.assertIn("filter", body["news_note"].lower())  # OFF or clear
+        self.assertEqual(body["guardrail_violations"], [])
+        self.assertEqual(body["provider"], "template")
+
     def test_backtest_endpoint(self):
         r = client.post(
             "/api/v1/backtests",

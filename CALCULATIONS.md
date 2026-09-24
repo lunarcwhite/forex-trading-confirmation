@@ -114,6 +114,17 @@ Upper = Basis + 2*Std ; Lower = Basis - 2*Std
 - Minimum: 20 candle.
 - State: `Width expanding vs prior → volatility_expansion`, else `normal`. `%B` hanya lokasi relatif, bukan sinyal.
 
+## 8.1 Volatility Decision Rule (MVP)
+
+```
+need 21 closes (width now + width prior window)
+expansion_shock jika width_now > 1.5 * width_prev → FAIL (tahan entry)
+else PASS (normal)
+kurang dari 21 closes → NOT_READY
+```
+
+Faktor 1.5x didokumentasikan di sini sebagai batas kejutan volatilitas MVP.
+
 ---
 
 # 9. Minimum Candle Summary (MVP)
@@ -164,6 +175,22 @@ Pair defaults MVP (`currency_pairs`):
 Contoh verifikasi:
 - Balance 1000, risk 1% → risk_amount 10. EUR/USD entry 1.1752 SL 1.1720 → dist 0.0032 → 32 pips → lots = 10/(32*10)=0.03125 → 0.03 lot.
 - Entry 100 SL 98 TP 104 → risk 2 reward 4 → R:R 2.0.
+
+## 10.1 Hard Filters (`check_limits`)
+
+Setiap limit opsional: tanpa pengukuran dan batas → `SKIP` (dilaporkan,
+tidak pernah dianggap lolos diam-diam). Satu `FAIL` → status `fail`.
+
+```
+min_rr:             R:R None atau < min_rr (default 2.0, toleransi float 1e-9) → FAIL
+max_spread:         spread > max_spread → FAIL
+max_position_size:  lots > max_lots → FAIL (lots sudah di-cap di §10)
+max_exposure:       exposure_pct > max_exposure_pct → FAIL
+max_open_positions: open_positions >= max_open_positions → FAIL
+max_daily_loss:     daily_loss_pct >= max_daily_loss_pct → FAIL
+```
+
+Rule keputusan engine memakai plan nyata: plan kosong/invalid → `risk` FAIL.
 
 ---
 
@@ -235,6 +262,28 @@ FVG_bearish jika high[i] < low[i-2] → zone [low[i], high[i-2]]
 
 - Mitigated (invalidated) jika ada close menembus penuh zone berlawanan arah. Wick masuk saja = touched, bukan mitigated.
 
+# 14.5 Location Decision Rule (MVP, pullback)
+
+Untuk BUY (SELL mirror). Zones: support/resistance dari §14.1,
+FVG live (unmitigated) dari §14.4. Toleransi sentuh `0.25*ATR`.
+
+```
+uncomputable jika ATR invalid ATAU (tanpa swing high/low DAN tanpa FVG live)
+  → NOT_READY
+lawan zona berisi close (resistance / bearish FVG) → FAIL (prioritas aman)
+zona searah berisi close (support / bullish FVG) → PASS
+  (containment mengalahkan proximity: zona flip pasca-BOS boleh overlap)
+hanya menyentuh dalam 0.25*ATR → ikut sisi yang disentuh
+cukup data tapi tanpa location edge → FAIL
+```
+
+## 14.6 Spread Hard-Filter Input (MVP)
+
+```
+tanpa spread feed → NOT_APPLICABLE (diabaikan agregasi, non-blocking)
+dengan feed: spread <= max_spread → PASS else FAIL (rule_type spread → NO_TRADE)
+```
+
 # 15. SL/TP Suggestion + Entry Zone (MVP)
 
 Untuk BUY (SELL mirror):
@@ -243,6 +292,11 @@ Untuk BUY (SELL mirror):
 entry_zone = demand/OB/FVG yang berisi/menyentuh harga saat ini (pilih yang terbaru)
 entry_ref = close_last (jika di dalam zone) else zone_mid
 sl_raw = min(zone_low - 0.2*ATR, entry_ref - 1.0*ATR)
+```
+
+`menyentuh` = overlap dengan range candle terakhir. Tanpa zona yang
+menahan harga → fallback proxy ATR berlabel (`entry_source: atr_proxy`,
+zone `[entry-0.5*ATR, entry]`), bukan zona fabrikasi.
 stop_loss = sl_raw - spread
 sl_dist = entry_ref - stop_loss   (>0, else RISK VALIDATION FAILED)
 take_profit = entry_ref + min_rr * sl_dist   (min_rr dari risk_profiles, default 2.0)
@@ -265,3 +319,59 @@ M5 hanya gating timing (confirmation candle), tidak mengubah bias
 ```
 
 - Kurang dari 3 dari 5 TF tersedia → `MTF INVALID`.
+
+## 16.1 MTF Gate (aturan keputusan)
+
+Gate hanya menurunkan (downgrade), tidak pernah menaikkan keputusan:
+
+```
+alignment weak (H4 != H1, keduanya non-neutral) → NO_TRADE
+  + invalidation "Conflicting timeframe (H4 .. vs H1 ..)"
+alignment MTF INVALID → NO_TRADE + invalidation "Insufficient multi-timeframe data"
+moderate / strong → tidak mengubah keputusan
+```
+
+# 17. Price Action Patterns (MVP)
+
+Evaluasi dua candle terakhir yang tersimpan (`[-2]`, `[-1]`).
+Kurang dari 2 candle, harga ≤ 0, atau body nol pada pin → `NOT_READY`/tidak ada pola.
+Tidak ada fabrikasi: tanpa pola → `signal None` → konfirmasi `NOT_READY`.
+
+```
+body = |close - open|
+bullish_engulfing:
+  prev bearish (close[-2] < open[-2])
+  DAN last bullish (close[-1] > open[-1])
+  DAN open[-1] <= close[-2] DAN close[-1] >= open[-2]
+bearish_engulfing: mirror
+bullish_pin (hammer):
+  body > 0 DAN (min(open,close) - low) >= 2*body DAN (high - max(open,close)) <= body
+bearish_pin (shooting star): mirror
+```
+
+Konfirmasi arah setup (`confirmation(signal, direction)`):
+
+```
+signal None → NOT_READY
+signal searah (buy+bullish / sell+bearish) → PASS
+signal berlawanan → FAIL
+```
+
+Contoh verifikasi:
+- prev O=10 C=9, last O=8.9 C=10.1 → `bullish_engulfing`, signal bullish.
+- last O=10 C=10.5 H=10.6 L=9.0 → lower=1.0 ≥ 2*0.5, upper=0.1 ≤ 0.5 → `bullish_pin`.
+
+---
+
+# 18. News Risk (V2, blackout window)
+
+```
+currencies = kedua sisi pair (EUR/USD → EUR, USD)
+blackout = [scheduled - 60min, scheduled + 15min]
+HIGH impact di blackout → ELEVATED → NO_TRADE (hard filter rule_type news)
+tanpa DB / tanpa source / calendar unreachable → OFF (eksplisit, tak mengasumsikan aman)
+hanya medium/low di window → CLEAR + info
+```
+
+Input manual via `POST /api/v1/events` (login) atau baris `economic_events`
+(source tercatat; dedupe via `(source, external_id)`).
