@@ -281,3 +281,60 @@ def journal_add(body: dict):
 @app.get("/api/v1/journal")
 def journal_list():
     return {"entries": broker().journal()}
+
+
+class AuthIn(BaseModel):
+    email: str = ""
+    password: str = ""
+    name: str = ""
+
+
+def _db_required():
+    if not os.getenv("DATABASE_URL"):
+        raise HTTPException(503, "auth needs DATABASE_URL")
+
+
+@app.post("/api/v1/auth/register")
+def register(body: AuthIn):
+    _db_required()
+    from app.auth import create_token, hash_password
+    from app.db import connect
+
+    if not body.email or not body.password:
+        raise HTTPException(400, "email + password required")
+    with connect() as conn:
+        exists = conn.execute("select id from users where email=%s", (body.email,)).fetchone()
+        if exists:
+            raise HTTPException(409, "email taken")
+        row = conn.execute(
+            "insert into users (name, email, password_hash) values (%s,%s,%s) returning id",
+            (body.name or body.email.split("@")[0], body.email, hash_password(body.password)),
+        ).fetchone()
+        conn.commit()
+        uid = str(row[0])
+    return {"user_id": uid, "token": create_token(uid)}
+
+
+@app.post("/api/v1/auth/login")
+def login(body: AuthIn):
+    _db_required()
+    from app.auth import create_token, verify_password
+    from app.db import connect
+
+    with connect() as conn:
+        row = conn.execute(
+            "select id, password_hash from users where email=%s", (body.email,)
+        ).fetchone()
+    if not row or not verify_password(body.password, row[1]):
+        raise HTTPException(401, "bad credentials")
+    return {"user_id": str(row[0]), "token": create_token(str(row[0]))}
+
+
+@app.get("/api/v1/auth/whoami")
+def whoami(authorization: str = Query("", alias="token")):
+    from app.auth import decode_token
+
+    uid = decode_token(authorization.replace("Bearer ", ""))
+    if not uid:
+        raise HTTPException(401, "invalid token")
+    return {"user_id": uid}
