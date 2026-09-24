@@ -60,7 +60,7 @@ export default function Paper() {
       <h1>Paper Trading <span className="muted">SIMULATION</span></h1>
       <div className="card">
         <label>Account: <select value={acc} onChange={(e) => setAcc(e.target.value)}>
-          {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} — ${a.balance}</option>)}
+          {accounts.map((a) => <option key={a.id} value={a.id}>{a.name} · ${a.balance}</option>)}
         </select></label>{" "}
         <input value={name} onChange={(e) => setName(e.target.value)} size={10} />
         <button onClick={create}>New $10k account</button>
@@ -76,20 +76,24 @@ export default function Paper() {
         <label>SL: <input value={form.sl} onChange={(e) => setForm({ ...form, sl: e.target.value })} size={9} /></label>{" "}
         <label>TP: <input value={form.tp} onChange={(e) => setForm({ ...form, tp: e.target.value })} size={9} /></label>{" "}
         <label>Signal ID: <input value={form.signal_id} onChange={(e) => setForm({ ...form, signal_id: e.target.value })} size={10} placeholder="opsional" /></label>{" "}
-        <button onClick={loadSignal}>Load signal</button> <button onClick={order}>Place (sim)</button>
+        <button className="primary" onClick={loadSignal}>Load signal</button> <button className="primary" onClick={order}>Place (sim)</button>
       </div>
       <div className="card" style={{ marginTop: 12 }}>
         <h3>Open Positions</h3>
-        <table><thead><tr><th>Pair</th><th>Dir</th><th>Lots</th><th>Entry</th><th>uPnL</th><th></th></tr></thead>
-        <tbody>{positions.map((p) => <CloseRow key={p.id} p={p} onClose={close} />)}</tbody></table>
+        {positions.length === 0
+          ? <p className="empty">Tidak ada posisi terbuka. <span className="act">Isi form order di atas.</span></p>
+          : <div className="tbl-wrap"><table><thead><tr><th>Pair</th><th>Dir</th><th>Lots</th><th>Entry</th><th>uPnL</th><th></th></tr></thead>
+        <tbody>{positions.map((p) => <CloseRow key={p.id} p={p} onClose={close} />)}</tbody></table></div>}
       </div>
       <div className="card" style={{ marginTop: 12 }}>
         <h3>Closed Trades</h3>
-        <table><thead><tr><th>Pair</th><th>Entry</th><th>Exit</th><th>P/L</th><th>R</th><th>Result</th></tr></thead>
+        {trades.length === 0
+          ? <p className="empty">Belum ada trade tertutup.</p>
+          : <div className="tbl-wrap"><table><thead><tr><th>Result</th><th>Pair</th><th>Entry</th><th>Exit</th><th>P/L</th><th>R</th></tr></thead>
         <tbody>{trades.map((t) => (
-          <tr key={t.id}><td>{t.symbol}</td><td className="mono">{t.entry}</td>
+          <tr key={t.id}><td>{t.result}</td><td>{t.symbol}</td><td className="mono">{t.entry}</td>
             <td className="mono">{t.exit}</td><td className="mono">{t.pnl}</td>
-            <td className="mono">{t.r_multiple}</td><td>{t.result}</td></tr>))}</tbody></table>
+            <td className="mono">{t.r_multiple}</td></tr>))}</tbody></table></div>}
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ export default function Backtest() {
       <p className="muted">Long-only trend-pullback · SL-first · no lookahead · simulator data</p>
       <label>Pair: <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
         {["EUR/USD", "GBP/USD", "USD/JPY", "XAU/USD"].map((s) => <option key={s}>{s}</option>)}
-      </select></label> <button onClick={run}>Run Backtest</button>
+      </select></label> <button className="primary" onClick={run}>Run Backtest</button>
       {loading && <p className="muted">Running…</p>}
       {out && (
         <div className="grid2" style={{ marginTop: 12 }}>
@@ -40,7 +40,7 @@ export default function Backtest() {
                 <td className="mono">{t.exit.toFixed(5)}</td>
                 <td className="mono">{t.pnl}</td><td className="mono">{t.r}</td><td>{t.result}</td></tr>))}
             </tbody></table>
-            {out.trades.length > 20 && <p className="muted">+{out.trades.length - 20} more</p>}
+            {out.trades.length > 20 && <p className="muted">+{out.trades.length - 20} lainnya (20 pertama ditampilkan)</p>}
           </div>
         </div>)}
     </div>

@@ -18,6 +18,7 @@ export default function Builder() {
       condition: { field: "rsi_14", operator: "greater_than_or_equal", value: 50 }, required: true, weight: 1 },
   ]);
   const [out, setOut] = useState(null);
+  const [msg, setMsg] = useState("");
   const set = (i, patch) => setRules(rules.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const setCond = (i, patch) =>
     setRules(rules.map((r, j) => (j === i ? { ...r, condition: { ...r.condition, ...patch } } : r)));
@@ -30,10 +31,16 @@ export default function Builder() {
       .then((r) => r.json()).then(setOut);
   };
   const save = () => {
+    setMsg("");
     fetch(`${API}/api/v1/strategies`, { method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ name, direction: "buy", rules }) })
-      .then((r) => r.json()).then((j) => alert(`Saved: ${j.id}`));
+      .then(async (r) => {
+        const j = await r.json();
+        if (r.status === 401) { setMsg("Login dulu untuk menyimpan strategi."); return; }
+        if (!r.ok) { setMsg(j.detail || "gagal menyimpan"); return; }
+        setMsg(`Tersimpan: ${j.id}`);
+      });
   };
   return (
     <div>
@@ -60,7 +67,8 @@ export default function Builder() {
         </div>))}
       <p><button onClick={add}>+ Add rule</button>{" "}
         <button onClick={preview}>Preview vs {symbol}</button>{" "}
-        <button onClick={save}>Save strategy</button></p>
+        <button className="primary" onClick={save}>Save strategy</button></p>
+      {msg && <p className="muted">{msg}</p>}
       {out && (
         <div className="card">
           <p><span className={`badge ${out.decision}`}>{out.decision}</span></p>

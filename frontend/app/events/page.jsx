@@ -54,24 +54,24 @@ export default function Events() {
   return (
     <div>
       <h1>Economic Calendar <span className="muted">V2</span></h1>
-      <p className="muted">
-        Source: {src ? `${src.configured_source} (rows: ${(src.row_sources || []).join(", ") || "—"})` : "…"} ·
-        HIGH ±[−15min,+60min] → ELEVATED → NO_TRADE · tanpa baris/unreachable → OFF (tak mengasumsikan aman).
+      <p className="muted page-sub">
+        Source: {src ? `${src.configured_source} (rows: ${(src.row_sources || []).join(", ") || "none"})` : "memuat…"} ·
+        HIGH ±[-15min,+60min] menuju ELEVATED lalu NO_TRADE · tanpa baris/unreachable menuju OFF (tak mengasumsikan aman).
       </p>
       <div className="card">
         <h3>Upcoming</h3>
         <input value={ccy} onChange={(e) => setCcy(e.target.value)} placeholder="filter currency" size={8} />{" "}
-        <button onClick={load}>Filter</button>
+        <button onClick={load}>Terapkan filter</button>
         <table><thead><tr><th>When (UTC)</th><th>Ccy</th><th>Event</th><th>Impact</th><th>Source</th></tr></thead>
         <tbody>{events.map((e) => (
           <tr key={e.id}><td className="mono">{e.scheduled_at}</td><td>{e.currency}</td>
             <td>{e.event_name}</td><td>{e.impact}</td><td className="muted">{e.source}</td></tr>))}</tbody></table>
-        {events.length === 0 && <p className="muted">Tidak ada event (filter OFF — bukan berarti aman).</p>}
+        {events.length === 0 && <p className="empty">Tidak ada event (filter OFF, bukan berarti aman).</p>}
       </div>
       <div className="card" style={{ marginTop: 12 }}>
         <h3>CSV Import (login)</h3>
         <textarea value={csv} onChange={(e) => setCsv(e.target.value)} rows={5} cols={90} />
-        <p><button onClick={doImport}>Import</button></p>
+        <p><button className="primary" onClick={doImport}>Import CSV</button></p>
         {msg && <p className="muted">{msg}</p>}
       </div>
       <div className="card" style={{ marginTop: 12 }}>
@@ -81,7 +81,7 @@ export default function Events() {
         <label>Impact <select value={man.impact} onChange={(e) => setMan({ ...man, impact: e.target.value })}>
           <option>high</option><option>medium</option><option>low</option></select></label>{" "}
         <label>At (ISO) <input value={man.scheduled_at} onChange={(e) => setMan({ ...man, scheduled_at: e.target.value })} size={28} placeholder="2026-10-01T12:30:00+00:00" /></label>{" "}
-        <button onClick={addManual}>Save</button>
+        <button className="primary" onClick={addManual}>Save event</button>
       </div>
     </div>
   );

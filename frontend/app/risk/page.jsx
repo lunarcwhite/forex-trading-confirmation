@@ -89,12 +89,12 @@ export default function Risk() {
   return (
     <div>
       <h1>Risk Profiles</h1>
-      <p className="muted">Batas risk tersimpan di PG · setiap Record decision menulis 1 baris risk_checks · tanpa pengukuran = SKIP, bukan lolos diam-diam.</p>
+      <p className="muted page-sub">Batas risk tersimpan di PG · setiap Record decision menulis 1 baris risk_checks · tanpa pengukuran = SKIP, bukan lolos diam-diam.</p>
       {err && <p>{err}</p>}
       <div className="card">
         <h3>Profiles ({profiles.length})</h3>
         {profiles.length === 0
-          ? <p className="muted">Belum ada — Record 1 signal untuk bootstrap Default, atau buat di bawah.</p>
+          ? <p className="empty">Belum ada. <span className="act">Record 1 signal untuk bootstrap Default, atau buat di bawah.</span></p>
           : <table><thead><tr><th>Name</th><th>Risk%</th><th>Min R:R</th><th>MaxPos</th><th>Status</th></tr></thead>
             <tbody>{profiles.map((p) => (
               <tr key={p.id}><td>{p.name}</td><td>{p.risk_per_trade_pct}</td>
@@ -113,14 +113,14 @@ export default function Risk() {
           ))}
         </div>
         <p>
-          <button onClick={() => save(!editing)}>{editing ? "Update" : "Create"}</button>{" "}
+          <button className="primary" onClick={() => save(!editing)}>{editing ? "Update profile" : "Create profile"}</button>{" "}
           {editing && <button onClick={() => { setEditing(null); setForm(DEFAULT_FORM); }}>Cancel</button>}
         </p>
         {msg && <p className="muted">{msg}</p>}
       </div>
       <div className="card" style={{ marginTop: 12 }}>
         <h3>Stored risk_checks</h3>
-        <p className="muted">Setiap signal tercatat punya 1 baris risk_checks (setup → risk_checks → signal). Masukkan signal_id untuk melihat.</p>
+        <p className="muted">Setiap signal tercatat punya 1 baris risk_checks (setup, risk_checks, signal). Masukkan signal_id untuk melihat.</p>
         <input value={sigId} onChange={(e) => setSigId(e.target.value)}
           placeholder="signal_id" size={40} />{" "}
         <button onClick={viewChecks}>View</button>
@@ -130,8 +130,8 @@ export default function Risk() {
             ? <p className="muted">Tidak ada baris.</p>
             : <table><thead><tr><th>Status</th><th>R:R</th><th>Failures</th><th>Profile</th></tr></thead>
               <tbody>{checks.map((c) => (
-                <tr key={c.id}><td>{c.status}</td><td>{c.risk_reward ?? "—"}</td>
-                  <td>{(c.failures || []).join(", ") || "—"}</td>
+                <tr key={c.id}><td>{c.status}</td><td>{c.risk_reward ?? "n/a"}</td>
+                  <td>{(c.failures || []).join(", ") || "n/a"}</td>
                   <td className="mono">{c.risk_profile_id.slice(0, 8)}</td></tr>))}
               </tbody></table>)}
       </div>

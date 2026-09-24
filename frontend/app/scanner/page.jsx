@@ -35,32 +35,40 @@ export default function Scanner() {
   return (
     <div>
       <h1>Market Scanner</h1>
-      <p className="muted">Sesi aktif: {active.join(", ") || "—"} ·{" "}
-        <button onClick={() => setLive(!live)}>{live ? "● Live" : "○ Live"}</button>
+      <p className="muted page-sub">Sesi aktif: {active.join(", ") || "tidak ada"} ·{" "}
+        <button className={live ? "on" : ""} onClick={() => setLive(!live)} aria-pressed={live}>
+          {live ? "● Live" : "○ Live"}</button>
         {liveAt && <span className="mono"> tick {liveAt.slice(11, 19)}</span>}
         <span> (WS in-process, tanpa Redis)</span></p>
-      <label>TF: <select value={tf} onChange={(e) => setTf(e.target.value)}>
-        <option>M5</option><option>M15</option><option>H1</option><option>H4</option><option>D1</option>
-      </select></label> <label>Pair: <select value={sym} onChange={(e) => setSym(e.target.value)}>
-        {SYMS.map((s) => <option key={s} value={s}>{s || "All"}</option>)}
-      </select></label> <label>Session: <select value={sess} onChange={(e) => setSess(e.target.value)}>
-        {SESS.map((s) => <option key={s} value={s}>{s || "All"}</option>)}
-      </select></label> <label>Decision: <select value={decision} onChange={(e) => setDecision(e.target.value)}>
-        <option value="">All</option>
-        <option>ENTER</option>
-        <option>WAIT</option>
-        <option>NO_TRADE</option>
-      </select></label>
-      {!rows ? <p className="muted">Loading…</p> : (
-        <table>
-          <thead><tr><th>Pair</th><th>Strategy</th><th>Bias</th><th>Setup</th><th>Decision</th></tr></thead>
-          <tbody>{rows.map((r) => (
-            <tr key={r.symbol}>
-              <td><a href={`/market/${encodeURIComponent(r.symbol)}`}>{r.symbol}</a></td>
-              <td>{r.strategy}</td><td>{r.bias}</td><td className="mono">{r.setup}</td>
-              <td><span className={`badge ${r.decision}`}>{r.decision}</span></td>
-            </tr>))}</tbody>
-        </table>)}
+      <div className="card">
+        <label>TF: <select value={tf} onChange={(e) => setTf(e.target.value)}>
+          <option>M5</option><option>M15</option><option>H1</option><option>H4</option><option>D1</option>
+        </select></label> <label>Pair: <select value={sym} onChange={(e) => setSym(e.target.value)}>
+          {SYMS.map((s) => <option key={s} value={s}>{s || "All"}</option>)}
+        </select></label> <label>Session: <select value={sess} onChange={(e) => setSess(e.target.value)}>
+          {SESS.map((s) => <option key={s} value={s}>{s || "All"}</option>)}
+        </select></label> <label>Decision: <select value={decision} onChange={(e) => setDecision(e.target.value)}>
+          <option value="">All</option>
+          <option>ENTER</option>
+          <option>WAIT</option>
+          <option>NO_TRADE</option>
+        </select></label>
+      </div>
+      <div className="card">
+        {!rows ? <p className="muted">Loading…</p> : rows.length === 0
+          ? <p className="empty">Tidak ada pair cocok. <span className="act">Longgarkan filter.</span></p> : (
+          <div className="tbl-wrap"><table>
+            <thead><tr><th>Pair</th><th>Decision</th><th>Setup</th><th>Bias</th><th>Strategy</th></tr></thead>
+            <tbody>{rows.map((r) => (
+              <tr key={r.symbol}>
+                <td><a href={`/market/${encodeURIComponent(r.symbol)}`}>{r.symbol}</a></td>
+                <td><span className={`badge ${r.decision}`}>{r.decision}</span></td>
+                <td className="mono">{r.setup}</td>
+                <td>{r.bias}</td>
+                <td className="muted">{r.strategy}</td>
+              </tr>))}</tbody>
+          </table></div>)}
+      </div>
     </div>
   );
 }

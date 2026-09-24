@@ -35,7 +35,7 @@ export default function Login() {
         <label>Email: <input value={email} onChange={(e) => setEmail(e.target.value)} /></label><br /><br />
         <label>Password: <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
         <p><button onClick={() => go("register")}>Register</button>{" "}
-          <button onClick={() => go("login")}>Login</button>{" "}
+          <button className="primary" onClick={() => go("login")}>Login</button>{" "}
           <button onClick={out}>Logout</button></p>
         {msg && <p className="muted">{msg}</p>}
         <p className="muted">Write endpoints (paper order, journal, builder save) butuh login.</p>

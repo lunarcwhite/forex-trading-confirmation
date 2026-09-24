@@ -1,32 +1,106 @@
+/* Design system: dark trading workstation (DESIGN.md).
+   Palette: neutral base + semantic states + one blue accent (R-29).
+   Mono numerals for figures (DESIGN.md 20). Motion: hover only (MOTION 1). */
 :root {
   --bg: #0b0e14;
   --panel: #141926;
+  --panel-2: #1a2133;
+  --line: #222a3d;
   --text: #e6e9f0;
-  --muted: #8b93a7;
+  --muted: #9aa3b5;
   --green: #22c55e;
   --amber: #f59e0b;
   --red: #ef4444;
   --blue: #3b82f6;
+  --radius-card: 10px;
+  --radius-ctl: 6px;
+  --radius-pill: 20px;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text);
-  font-family: Inter, system-ui, sans-serif; }
-a { color: var(--blue); text-decoration: none; }
-.layout { display: flex; min-height: 100vh; }
-.sidebar { width: 200px; background: var(--panel); padding: 16px; display: flex;
-  flex-direction: column; gap: 8px; }
-.sidebar a { color: var(--text); padding: 8px; border-radius: 6px; }
-.sidebar a:hover { background: #1e2638; }
-.main { flex: 1; padding: 24px; }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.card { background: var(--panel); border-radius: 10px; padding: 16px; }
-.badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-weight: 700; }
+  font-family: Inter, system-ui, sans-serif; line-height: 1.5; }
+a { color: var(--blue); }
+a:hover { text-decoration: underline; }
+h1 { font-size: 1.4rem; margin: 0 0 4px; }
+h3 { font-size: 1rem; margin: 0 0 8px; }
+h4 { font-size: 0.9rem; margin: 12px 0 4px; }
+p { margin: 8px 0; }
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+
+/* Focal decision treatment: badge carries icon + text, never color alone. */
+.badge { display: inline-block; padding: 4px 12px; border-radius: var(--radius-pill);
+  font-weight: 700; font-size: 0.85rem; letter-spacing: 0.02em; }
 .badge.ENTER { background: rgba(34,197,94,.15); color: var(--green); }
 .badge.WAIT { background: rgba(245,158,11,.15); color: var(--amber); }
 .badge.NO_TRADE { background: rgba(239,68,68,.15); color: var(--red); }
-.mono { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
-.muted { color: var(--muted); }
-table { width: 100%; border-collapse: collapse; }
-th, td { padding: 8px; border-bottom: 1px solid #222a3d; text-align: left; }
+
+.layout { display: flex; min-height: 100vh; }
+.sidebar { width: 208px; flex-shrink: 0; background: var(--panel); padding: 16px;
+  display: flex; flex-direction: column; gap: 4px; }
+.sidebar .brand { font-weight: 800; padding: 8px; font-size: 0.95rem; }
+.sidebar a { color: var(--text); padding: 9px 10px; border-radius: var(--radius-ctl);
+  text-decoration: none; min-height: 40px; display: flex; align-items: center; }
+.sidebar a:hover { background: var(--panel-2); text-decoration: none; }
+.sidebar .nav-label { padding: 10px 10px 2px; font-size: 0.75rem; }
+.main { flex: 1; padding: 24px; max-width: 1100px; min-width: 0; }
+.page-sub { margin-top: 0; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-card);
+  padding: 16px; margin-bottom: 12px; }
+.card h3:first-child { margin-top: 0; }
+
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } .sidebar { width: 150px; } }
+.grid2 > .card { margin-bottom: 0; }
+
+/* Decision panel: the focal point of analytical screens. */
+.decision { border-left: 3px solid var(--amber); }
+.decision.ENTER { border-left-color: var(--green); }
+.decision.NO_TRADE { border-left-color: var(--red); }
+
+/* Confirmation strength bars (DESIGN.md 10): real pass/missing state. */
+.bar { height: 8px; border-radius: 4px; background: var(--panel-2); overflow: hidden; min-width: 80px; }
+.bar > span { display: block; height: 100%; background: var(--green); }
+.bar.missing > span { background: var(--amber); }
+
+/* Controls: native elements, visible focus, 44px tap targets on touch. */
+button, .btn { background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+  border-radius: var(--radius-ctl); padding: 8px 14px; font-size: 0.9rem; cursor: pointer; }
+button:hover, .btn:hover { border-color: var(--blue); }
+button:disabled { opacity: 0.45; cursor: default; }
+button.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+button.on { border-color: var(--green); color: var(--green); font-weight: 700; }
+input, select, textarea { background: var(--bg); color: var(--text); border: 1px solid var(--line);
+  border-radius: var(--radius-ctl); padding: 8px 10px; font-size: 0.9rem; font-family: inherit; }
+label { font-size: 0.9rem; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* Segmented timeframe switch: one control, not scattered buttons. */
+.seg { display: inline-flex; gap: 2px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius-ctl); padding: 2px; }
+.seg button { border: 0; background: transparent; padding: 6px 12px; }
+.seg button[aria-current="true"] { background: var(--blue); color: #fff; font-weight: 600; }
+
+/* Tables: deciding column early, horizontal scroll on narrow screens. */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+th { color: var(--muted); font-weight: 600; font-size: 0.8rem; }
+
+/* Empty/loading/error states name cause + next action (R-27). */
+.empty { color: var(--muted); }
+.empty .act { color: var(--text); }
+
+/* Static LIVE marker: shown only while streaming real ticks, no pulse/glow. */
+.live { color: var(--green); font-weight: 700; font-size: 0.8rem; }
+
+@media (max-width: 800px) {
+  .grid2 { grid-template-columns: 1fr; }
+  .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .main { padding: 16px; }
+  button, .sidebar a, input, select { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

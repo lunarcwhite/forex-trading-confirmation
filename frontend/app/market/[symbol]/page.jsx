@@ -14,7 +14,8 @@ function Chart({ candles }) {
   const y = (p) => pad + (1 - (p - lo) / span) * (H - 2 * pad);
   const w = W / data.length;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ background: "#0b0e14", borderRadius: 8 }}>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Grafik candlestick"
+      style={{ background: "#0b0e14", borderRadius: 8 }}>
       {data.map((c, i) => {
         const up = c.close >= c.open;
         const col = up ? "#22c55e" : "#ef4444";
@@ -56,7 +57,7 @@ export default function MarketDetail({ params }) {
       fetch(`${API}/api/v1/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${tf}&limit=120`).then((r) => r.json()),
       fetch(`${API}/api/v1/ai/explain?symbol=${encodeURIComponent(symbol)}`).then((r) => r.json()).catch(() => null),
     ]).then(([a, s, c, e]) => { setAn(a); setSig(s); setCandles(c.candles); setAi(e); })
-      .catch((e) => setErr(`Market data unavailable: ${e}`));
+      .catch(() => setErr("Data market tak tersedia. Pastikan backend :8001 jalan, lalu muat ulang."));
     loadRecents();
   }, [symbol, tf]);
 
@@ -104,52 +105,61 @@ export default function MarketDetail({ params }) {
     }).catch((e) => setRecMsg(String(e)));
   };
 
-  if (err) return <div><h1>{symbol}</h1><p>{err}</p></div>;
-  if (!an || !sig || !candles) return <div><h1>{symbol}</h1><p className="muted">Loading…</p></div>;
-  const all = [...sig.confirmations.map((c) => [c, true]),
-               ...sig.missing_conditions.map((c) => [c, false])];
-  const f5 = (n) => (typeof n === "number" ? n.toFixed(5) : "—");
+  if (err) return <div><h1>{symbol}</h1><p className="empty">{err}</p></div>;
+  if (!an || !sig || !candles) return <div><h1>{symbol}</h1><p className="muted">Memuat analisis…</p></div>;
+  const passed = new Set(sig.confirmations);
+  const total = sig.confirmations.length + sig.missing_conditions.length;
+  const f5 = (n) => (typeof n === "number" ? n.toFixed(5) : "n/a");
   return (
     <div>
       <h1>{symbol} <span className="muted mono">{f5(an.indicators.ema_50)}</span></h1>
-      <div>{TFS.map((t) => (
-        <button key={t} onClick={() => setTf(t)} disabled={t === tf}
-          style={{ marginRight: 6, padding: "4px 10px", borderRadius: 6,
-            background: t === tf ? "#3b82f6" : "#1e2638", color: "#fff", border: 0 }}>
-          {t}</button>))}
-        <span className="muted"> · source: {an.source}</span></div>
-      <p><span className={`badge ${sig.state}`}>{sig.state}</span> <span className="muted">{an.bias} bias · news {sig.news?.state || "OFF"}</span>{" "}
-        <button onClick={record} style={{ marginLeft: 8 }}>Record decision</button></p>
-      {recMsg && <p className="muted">{recMsg}</p>}
+      <div className="seg" role="group" aria-label="Timeframe">
+        {TFS.map((t) => (
+          <button key={t} onClick={() => setTf(t)} aria-current={t === tf}>{t}</button>))}
+      </div>
+      <span className="muted"> · source: {an.source}</span>
+      <div className={`card decision ${sig.state}`} style={{ marginTop: 12 }}>
+        <span className={`badge ${sig.state}`}>{sig.state}</span>{" "}
+        <span className="muted">{an.bias} bias · {passed.size}/{total} konfirmasi · news {sig.news?.state || "OFF"}</span>
+        <p>{sig.state === "ENTER" ? "Seluruh kondisi mandatory terpenuhi."
+          : sig.state === "WAIT" ? `Menunggu: ${sig.missing_conditions.join(", ")}`
+          : `Batal: ${(sig.invalidations || []).join(", ") || sig.missing_conditions.join(", ")}`}</p>
+        <button className="primary" onClick={record}>Record decision</button>
+        {recMsg && <p className="muted">{recMsg}</p>}
+      </div>
       <div className="card"><h3>Chart ({tf})</h3><Chart candles={candles} /></div>
       {an.mtf?.biases && (
-        <div className="card" style={{ marginTop: 12 }}>
+        <div className="card">
           <h3>MTF Analysis <span className="muted">· {an.mtf.alignment}</span></h3>
-          <table><tbody>
+          <div className="tbl-wrap"><table><tbody>
             {["D1", "H4", "H1", "M15", "M5"].map((t) => (
-              <tr key={t}><td>{t}</td><td>{an.mtf.biases[t] ?? "—"}</td>
+              <tr key={t}><td>{t}</td><td>{an.mtf.biases[t] ?? "n/a"}</td>
                 <td>{an.mtf.biases[t] === "bullish" ? "✓" : an.mtf.biases[t] === "bearish" ? "✕" : "○"}</td></tr>))}
-          </tbody></table>
+          </tbody></table></div>
         </div>)}
-      <div className="grid2" style={{ marginTop: 12 }}>
+      <div className="grid2">
         <div className="card">
           <h3>Confirmation Matrix</h3>
           <table><tbody>
-            {all.map(([c, ok]) => <tr key={c}><td>{c}</td><td>{ok ? "✓" : "○"}</td></tr>)}
+            {[...sig.confirmations.map((c) => [c, true]),
+              ...sig.missing_conditions.map((c) => [c, false])].map(([c, ok]) => (
+              <tr key={c}><td>{c}</td>
+                <td><span className={`bar${ok ? "" : " missing"}`}><span style={{ width: ok ? "100%" : "25%" }} /></span></td>
+                <td>{ok ? "✓" : "○"}</td></tr>))}
           </tbody></table>
-          <h3>Why {sig.state}?</h3>
+          <h4>Mengapa {sig.state}?</h4>
           {sig.missing_conditions.length === 0
             ? <p>Seluruh kondisi mandatory terpenuhi.</p>
             : <ul>{sig.missing_conditions.map((m) => <li key={m}>{m}</li>)}</ul>}
         </div>
         <div className="card">
           <h3>Trade Plan (ATR-based)</h3>
-          <p className="mono">Entry zone {f5(sig.entry_zone.min)} – {f5(sig.entry_zone.max)} <span className="muted">({sig.entry_zone.source})</span></p>
+          <p className="mono">Entry zone {f5(sig.entry_zone.min)} - {f5(sig.entry_zone.max)} <span className="muted">({sig.entry_zone.source})</span></p>
           <p className="mono">Entry {f5(sig.risk.entry)}</p>
           <p className="mono">SL {f5(sig.risk.stop_loss)}</p>
           <p className="mono">TP {f5(sig.risk.take_profit)}</p>
           <p className="mono">R:R {sig.risk.risk_reward?.toFixed?.(2)}</p>
-          <h3>Position Size</h3>
+          <h4>Position Size</h4>
           <label>Balance <input value={bal} onChange={(e) => setBal(e.target.value)} size={8} /></label>{" "}
           <label>Risk % <input value={riskPct} onChange={(e) => setRiskPct(e.target.value)} size={4} /></label>{" "}
           <button onClick={calc}>Calculate</button>
@@ -163,7 +173,7 @@ export default function MarketDetail({ params }) {
             </>)}
         </div>
       </div>
-      <div className="card" style={{ marginTop: 12 }}>
+      <div className="card">
         <h3>AI Analyst</h3>
         {!ai ? <p className="muted">Memuat penjelasan…</p> : (
           <>
@@ -188,12 +198,12 @@ export default function MarketDetail({ params }) {
           </>
         )}
       </div>
-      <div className="card" style={{ marginTop: 12 }}>
+      <div className="card">
         <h3>Recorded Signals</h3>
         {recents.length === 0
-          ? <p className="muted">Belum ada (login + Record decision).</p>
+          ? <p className="empty">Belum ada. <span className="act">Login lalu Record decision.</span></p>
           : <ul>{recents.map((s) => (
-            <li key={s.id} className="mono">{s.generated_at} — {s.decision} {s.direction} [{s.status}]
+            <li key={s.id} className="mono">{s.generated_at} · {s.decision} {s.direction} [{s.status}]
               {(NEXT[s.status] || []).map((n) => (
                 <button key={n} onClick={() => move(s.id, n)}
                   style={{ marginLeft: 6, padding: "2px 8px" }}>{n}</button>))}</li>))}</ul>}

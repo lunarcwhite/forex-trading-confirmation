@@ -52,13 +52,13 @@ export default function Alerts() {
         <label>Jenis <select value={typ} onChange={(e) => setTyp(e.target.value)}>
           {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select></label>{" "}
-        <button onClick={create}>Create</button>
+        <button className="primary" onClick={create}>Create alert</button>
         {msg && <p className="muted">{msg}</p>}
       </div>
       <div className="card" style={{ marginTop: 12 }}>
         <h3>Aktif & Riwayat</h3>
         {!alerts ? <p className="muted">Loading…</p> : alerts.length === 0
-          ? <p className="muted">Belum ada alert.</p> : (
+          ? <p className="empty">Belum ada alert. <span className="act">Buat satu di atas.</span></p> : (
           <table><thead><tr><th>Pair</th><th>Jenis</th><th>Aktif</th><th>Aksi</th></tr></thead>
           <tbody>{alerts.map((a) => (
             <tr key={a.id}>
@@ -69,9 +69,10 @@ export default function Alerts() {
       </div>
       <div className="card" style={{ marginTop: 12 }}>
         <h3>Events</h3>
-        {events.length === 0 ? <p className="muted">Belum ada event.</p> : (
+        {events.length === 0
+          ? <p className="empty">Belum ada event. <span className="act">Buat alert lalu Evaluate untuk memicu.</span></p> : (
           <ul>{events.slice().reverse().map((e, i) => (
-            <li key={i}>{e.triggered_at} — <strong>{e.payload.what}</strong> ({e.symbol})</li>))}</ul>)}
+            <li key={i}>{e.triggered_at} · <strong>{e.payload.what}</strong> ({e.symbol})</li>))}</ul>)}
       </div>
     </div>
   );
